@@ -17,31 +17,39 @@ The platform provides a secure and user-friendly environment for **Admins** and 
 
 
 <tr>
-<td align="center"><b>Exam Page (with Pagination)</b></td>
+<td align="center"><b>Exam Main Page (with Pagination)</b></td>
 </tr>
 <tr>
-<td align="center"><img src="https://github.com/sumitkumar1503/online-exam-system/blob/master/screenshots/exampage.png" width="90%"></td>
+<td align="center"><img src="https://github.com/harshsnha/NexExam-Online-Portal/blob/main/uploads/Main.png" width="90%"></td>
 </tr>
 
 <tr>
 <td align="center"><b>Admin Dashboard</b></td>
 </tr>
 <tr>
-<td align="center"><img src="https://github.com/sumitkumar1503/online-exam-system/blob/master/screenshots/admindashboard.png?raw=true" width="90%"></td>
+<td align="center"><img src="https://github.com/harshsnha/NexExam-Online-Portal/blob/main/uploads/Admin.png"></td>
 </tr>
 
 <tr>
 <td align="center"><b>Manage Exam</b></td>
 </tr>
 <tr>
-<td align="center"><img src="https://github.com/sumitkumar1503/online-exam-system/blob/master/screenshots/adminmanageexam.png" width="90%"></td>
+<td align="center"><img src="https://github.com/harshsnha/NexExam-Online-Portal/blob/main/uploads/Exam manage.png" width="90%"></td>
 </tr>
 
 <tr>
-<td align="center"><b>Manage Question</b></td>
+<td align="center"><b>Manage Students</b></td>
 </tr>
 <tr>
-<td align="center"><img src="https://github.com/sumitkumar1503/online-exam-system/blob/master/screenshots/adminmanagequestion.png" width="90%"></td>
+<td align="center"><img src="https://github.com/harshsnha/NexExam-Online-Portal/blob/main/uploads/C%20Student%20manage.png" width="90%"></td>
+</tr>
+</table>
+
+<tr>
+<td align="center"><b>Students Portal</b></td>
+</tr>
+<tr>
+<td align="center"><img src="https://github.com/harshsnha/NexExam-Online-Portal/blob/main/uploads/F%20Student%20Potal.png" width="90%"></td>
 </tr>
 </table>
 
@@ -100,12 +108,6 @@ The platform provides a secure and user-friendly environment for **Admins** and 
 
 ---
 
-### ✔️ Clone the Repository
-
-```bash
-git clone https://github.com/sumitkumar1503/online-exam-system.git
-cd online-exam-system
-```
 
 ---
 
@@ -117,7 +119,7 @@ Open the project → Run:
 
 Server will start at:
 
-👉 http://localhost:7890
+👉 http://localhost:8081
 
 ---
 
@@ -125,30 +127,5 @@ Server will start at:
 
 Access H2 Console:
 
-👉 http://localhost:7890/h2-console
+👉 http://localhost:8081/h2-console
 
-```
-JDBC URL : jdbc:h2:file:./data/examdb  
-Username : sa  
-Password : password
-```
-
----
-
-# 🔐 Default Admin User
-
-| Username | Password |
-|---------|----------|
-| admin | adminpass |
-
----
-
-# 📜 License
-
-This project is **open-source** under the **MIT License**.
-
----
-
-<p align="center">
-<strong>Happy Coding ❤️</strong>
-</p>
