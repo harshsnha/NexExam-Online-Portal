@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexExam - Login</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary-bg: #0f172a;
+            --accent-color: #38bdf8;
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            background-color: var(--primary-bg);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: #f8fafc;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Animated Background Orbs */
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            z-index: -1;
+            opacity: 0.4;
+        }
+        .orb-1 {
+            width: 300px; height: 300px;
+            background: var(--accent-color);
+            top: -100px; left: -100px;
+        }
+        .orb-2 {
+            width: 250px; height: 250px;
+            background: #a855f7;
+            bottom: -50px; right: -50px;
+        }
+
+        .login-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 28px;
+            padding: 3rem;
+            width: 100%;
+            max-width: 450px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .form-label {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #94a3b8;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-control {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            color: white;
+            padding: 0.75rem 1rem;
+            transition: 0.3s;
+        }
+
+        .form-control:focus {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.15);
+            color: white;
+        }
+
+        .btn-login {
+            background: var(--accent-color);
+            color: #0f172a;
+            border: none;
+            border-radius: 12px;
+            padding: 0.8rem;
+            font-weight: 800;
+            width: 100%;
+            transition: 0.3s;
+            margin-top: 1rem;
+        }
+
+        .btn-login:hover {
+            background: #7dd3fc;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(56, 189, 248, 0.3);
+        }
+
+        .alert {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+            border-radius: 12px;
+            font-size: 0.9rem;
+        }
+
+        .alert-success {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.2);
+            color: #86efac;
+        }
+
+        a {
+            color: var(--accent-color);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .brand-icon {
+            font-size: 2.5rem;
+            color: var(--accent-color);
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<div class="container d-flex justify-content-center">
+    <div class="login-card">
+        <div class="text-center mb-4">
+            <div class="brand-icon">
+                <i class="bi bi-shield-lock-fill"></i>
+            </div>
+            <h2 class="fw-bold">Welcome Back</h2>
+            <p class="text-secondary small">Enter your credentials to access NexExam</p>
+        </div>
+
+        <div th:if="${param.error}" class="alert alert-danger text-center mb-4">
+            <i class="bi bi-exclamation-circle-fill me-2"></i> Invalid username or password.
+        </div>
+        <div th:if="${param.logout}" class="alert alert-success text-center mb-4">
+            <i class="bi bi-check-circle-fill me-2"></i> Successfully logged out.
+        </div>
+
+        <form th:action="@{/login}" method="post">
+            <div class="mb-3">
+                <label for="username" class="form-label">Username</label>
+                <div class="position-relative">
+                    <input type="text" class="form-control" id="username" name="username" placeholder="admin / student" required autofocus>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <label for="password" class="form-label">Password</label>
+                <div class="position-relative">
+                    <input type="password" class="form-control" id="password" name="password" placeholder="••••••••" required>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-login">
+                SIGN IN <i class="bi bi-arrow-right-short ms-1"></i>
+            </button>
+        </form>
+
+        <div class="text-center mt-4">
+            <p class="text-secondary small">New student? <a th:href="@{/register}">Create an account</a></p>
+            <a th:href="@{/}" class="text-secondary small d-block mt-2"><i class="bi bi-house me-1"></i> Back to Home</a>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

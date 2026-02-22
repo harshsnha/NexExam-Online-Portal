@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${exam.title}">Exam - NexExam</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary-bg: #0f172a; --accent-color: #38bdf8; --text-main: #f8fafc;
+            --text-sec: #94a3b8; --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1); --option-bg: rgba(255, 255, 255, 0.03);
+        }
+
+        [data-bs-theme="light"] {
+            --primary-bg: #f8fafc; --accent-color: #0284c7; --text-main: #1e293b;
+            --text-sec: #64748b; --glass-bg: rgba(255, 255, 255, 0.85);
+            --glass-border: rgba(15, 23, 42, 0.1); --option-bg: rgba(15, 23, 42, 0.05);
+        }
+
+        body { background-color: var(--primary-bg); font-family: 'Plus Jakarta Sans', sans-serif; color: var(--text-main); min-height: 100vh; overflow-x: hidden; }
+
+        #startOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--primary-bg); z-index: 10000;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        .exam-header { background: var(--primary-bg); border-bottom: 1px solid var(--glass-border); padding: 1rem 0; position: sticky; top: 0; z-index: 1000; }
+        .timer-badge { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: #ef4444; padding: 8px 20px; border-radius: 50px; font-size: 1.5rem; font-weight: 800; font-family: monospace; }
+        .glass-card { background: var(--glass-bg); backdrop-filter: blur(15px); border: 1px solid var(--glass-border); border-radius: 24px; padding: 2rem; margin-bottom: 1.5rem; }
+        .question-card { display: none; }
+        .question-card.active { display: block; animation: fadeIn 0.4s ease; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .option-box { background: var(--option-bg); border: 1px solid var(--glass-border); border-radius: 15px; padding: 1rem 1.5rem; margin-bottom: 12px; cursor: pointer; transition: 0.3s; display: flex; align-items: center; }
+        .option-box:hover { background: rgba(56, 189, 248, 0.1); border-color: var(--accent-color); }
+        .form-check-input:checked ~ span { color: var(--accent-color); font-weight: 700; }
+
+        .q-btn { width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--glass-border); background: transparent; color: var(--text-sec); font-weight: 700; }
+        .q-btn.active { border-color: var(--accent-color); color: var(--accent-color); background: rgba(56, 189, 248, 0.1); }
+        .q-btn.answered { background: #10b981 !important; color: #ffffff !important; border: none; }
+
+        #strikeOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.98); z-index: 9999; display: none; align-items: center; justify-content: center; backdrop-filter: blur(20px); }
+        .strike-card { background: #1e293b; border: 2px solid #ef4444; border-radius: 32px; padding: 3rem; text-align: center; max-width: 500px; width: 90%; }
+    </style>
+</head>
+<body oncontextmenu="return false;">
+
+<div id="startOverlay">
+    <div class="glass-card text-center shadow-lg" style="max-width: 500px;">
+        <i class="bi bi-shield-lock-fill text-info" style="font-size: 4rem;"></i>
+        <h2 class="fw-bold mt-3" th:text="${exam.title}">Exam Title</h2>
+        <p class="text-secondary">Click below to enter secure fullscreen mode and start your exam.</p>
+        <button class="btn btn-info btn-lg w-100 rounded-pill fw-bold py-3 mt-3 text-white" onclick="initiateSecureExam()">START SECURE TEST</button>
+    </div>
+</div>
+
+<div id="strikeOverlay">
+    <div class="strike-card shadow-lg">
+        <i class="bi bi-exclamation-octagon-fill text-danger" style="font-size: 5rem;"></i>
+        <h2 class="fw-bold mt-3 mb-2 text-white">SECURITY ALERT</h2>
+        <p class="text-secondary" id="strikeMsg">Strike 1: Fullscreen exit detected. Return now or your exam will be auto-submitted.</p>
+        <button class="btn btn-danger w-100 rounded-pill py-3 fw-bold mt-3" onclick="reEnterFullscreen()">RE-ENTER EXAM</button>
+    </div>
+</div>
+
+<header class="exam-header">
+    <div class="container d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center">
+            <img th:if="${student.profilePicUrl != null}" th:src="@{${student.profilePicUrl}}" class="rounded-circle me-3 border border-info" width="45" height="45">
+            <div>
+                <h6 class="mb-0 fw-bold" th:text="${student.fullName}">Rahul</h6>
+                <small class="text-secondary" th:text="${exam.title}">Java Basics</small>
+            </div>
+        </div>
+        <div class="text-center">
+            <small class="text-uppercase text-secondary fw-bold small">Remaining Time</small>
+            <div id="timer" class="timer-badge">--:--</div>
+        </div>
+        <button type="button" onclick="confirmManualSubmit()" class="btn btn-success rounded-pill fw-bold px-4">Finish Exam</button>
+    </div>
+</header>
+
+<div class="container main-exam-content">
+    <form id="exam-form" th:action="@{/exam/submit}" method="post">
+        <input type="hidden" name="examId" th:value="${exam.id}" />
+        <input type="hidden" id="remainingTimeField" name="remainingTime">
+        <div class="row g-4">
+            <div class="col-lg-8">
+                <div th:each="question, iter : ${questions}" class="glass-card question-card" th:id="|q-card-${iter.index}|" th:data-question-index="${iter.index}">
+                    <div class="d-flex justify-content-between mb-4">
+                        <span class="badge bg-primary rounded-pill px-3 py-2" th:text="'Question ' + ${iter.count}">Q1</span>
+                        <span class="text-secondary small fw-bold" th:text="${question.marks} + ' Pts'">2 Pts</span>
+                    </div>
+                    <h4 class="fw-bold mb-5" th:text="${question.text}">Question Text</h4>
+                    <div class="options-list">
+                        <div class="option-box" th:each="optNum : ${#numbers.sequence(1, 4)}">
+                            <label class="w-100 d-flex align-items-center" th:for="|q${question.id}_o${optNum}|">
+                                <input class="form-check-input me-3" type="radio" th:name="|q_${question.id}|" th:id="|q${question.id}_o${optNum}|" th:value="${optNum}">
+                                <span th:text="${question['option' + optNum]}">Option</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-between mt-4">
+                    <button type="button" id="prev-btn" class="btn btn-outline-secondary rounded-pill px-4">Previous</button>
+                    <button type="button" id="next-btn" class="btn btn-info text-white rounded-pill px-4">Next Question</button>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="glass-card sticky-top" style="top: 100px;">
+                    <h6 class="fw-bold mb-4 text-uppercase small">Navigator</h6>
+                    <div class="palette-grid" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px;">
+                        <button type="button" th:each="q, iter : ${questions}" class="q-btn" th:text="${iter.count}" th:data-question-index="${iter.index}"></button>
+                    </div>
+                    <hr class="my-4 opacity-10">
+                    <button type="button" onclick="confirmManualSubmit()" class="btn btn-success w-100 rounded-pill py-2">Submit Exam</button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script th:src="@{/js/exam-timer.js}"></script>
+<script th:inline="javascript">
+    let escCount = 0;
+    const examForm = document.getElementById('exam-form');
+    const startOverlay = document.getElementById('startOverlay');
+    const strikeOverlay = document.getElementById('strikeOverlay');
+
+    function triggerFullscreen() {
+        const elem = document.documentElement;
+        if (elem.requestFullscreen) { elem.requestFullscreen(); }
+        else if (elem.webkitRequestFullscreen) { elem.webkitRequestFullscreen(); }
+        else if (elem.msRequestFullscreen) { elem.msRequestFullscreen(); }
+    }
+
+    function initiateSecureExam() {
+        triggerFullscreen();
+        startOverlay.style.display = 'none';
+        var durationInMinutes = [[${exam.durationInMinutes}]];
+        var timerDisplay = document.getElementById('timer');
+        if(typeof startTimer === 'function') {
+            startTimer(durationInMinutes, timerDisplay, examForm);
+        }
+    }
+
+    function reEnterFullscreen() {
+        strikeOverlay.style.display = 'none';
+        triggerFullscreen();
+    }
+
+    function finalSubmit() {
+        const timeLeft = document.getElementById('timer').innerText;
+        document.getElementById('remainingTimeField').value = timeLeft;
+        if(document.fullscreenElement) document.exitFullscreen();
+        examForm.submit();
+    }
+
+    document.addEventListener('fullscreenchange', () => {
+        if (!document.fullscreenElement && startOverlay.style.display === 'none') {
+            escCount++;
+            if (escCount === 1) {
+                strikeOverlay.style.display = 'flex';
+            } else if (escCount >= 2) {
+                finalSubmit();
+            }
+        }
+    });
+
+    function confirmManualSubmit() {
+        if(confirm("Finish the exam?")) {
+            finalSubmit();
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const questions = document.querySelectorAll('.question-card');
+        const paletteBtns = document.querySelectorAll('.q-btn');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        let currentIdx = 0;
+
+        function showQ(idx) {
+            questions.forEach(q => q.classList.remove('active'));
+            paletteBtns.forEach(b => b.classList.remove('active'));
+            questions[idx].classList.add('active');
+            paletteBtns[idx].classList.add('active');
+            currentIdx = idx;
+            prevBtn.style.visibility = (idx === 0) ? 'hidden' : 'visible';
+            nextBtn.innerHTML = (idx === questions.length - 1) ? 'Review Final' : 'Next Question';
+        }
+
+        nextBtn.addEventListener('click', () => { if(currentIdx < questions.length - 1) showQ(currentIdx + 1); });
+        prevBtn.addEventListener('click', () => { if(currentIdx > 0) showQ(currentIdx - 1); });
+        paletteBtns.forEach(btn => btn.addEventListener('click', () => showQ(parseInt(btn.getAttribute('data-question-index')))));
+
+        document.querySelectorAll('input[type="radio"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                const idx = this.closest('.question-card').getAttribute('data-question-index');
+                document.querySelector(`.q-btn[data-question-index="${idx}"]`).classList.add('answered');
+            });
+        });
+        showQ(0);
+    });
+</script>
+</body>
+</html>

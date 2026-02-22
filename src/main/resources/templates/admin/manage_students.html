@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Students - NexExam Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-bg: #0f172a; --accent-color: #38bdf8; --text-main: #f8fafc;
+            --text-sec: #94a3b8; --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1); --modal-bg: #1e293b;
+        }
+        [data-bs-theme="light"] {
+            --primary-bg: #f8fafc; --accent-color: #0284c7; --text-main: #1e293b;
+            --text-sec: #64748b; --glass-bg: rgba(255, 255, 255, 0.85);
+            --glass-border: rgba(15, 23, 42, 0.1); --modal-bg: #ffffff;
+        }
+        body { background-color: var(--primary-bg); font-family: 'Plus Jakarta Sans', sans-serif; color: var(--text-main); min-height: 100vh; transition: all 0.4s ease; }
+        .main-container { padding-top: 100px; padding-bottom: 50px; }
+        .glass-panel { background: var(--glass-bg); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 24px; padding: 2rem; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.2); }
+
+        .custom-table { background: transparent !important; margin: 0; border: none !important; }
+        .custom-table thead th { background: transparent !important; color: var(--accent-color) !important; font-weight: 700; text-transform: uppercase; font-size: 0.75rem; padding: 15px; border-bottom: 2px solid var(--glass-border) !important; }
+        .custom-table tbody tr { background: transparent !important; border-bottom: 1px solid var(--glass-border) !important; transition: 0.3s; }
+        .custom-table tbody td { background: transparent !important; color: var(--text-main) !important; padding: 1.2rem 0.75rem; }
+        .custom-table tbody tr:hover { background: rgba(56, 189, 248, 0.05) !important; }
+
+        .student-avatar { width: 45px; height: 45px; border-radius: 12px; object-fit: cover; border: 2px solid var(--glass-border); }
+        .modal-content { background: var(--modal-bg); color: var(--text-main); border: 1px solid var(--glass-border); border-radius: 20px; }
+        .form-control { background: rgba(148, 163, 184, 0.05); border: 1px solid var(--glass-border); color: var(--text-main) !important; border-radius: 10px; }
+        .btn-reset { background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 10px; }
+        .btn-delete { background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 10px; }
+    </style>
+</head>
+<body>
+<div th:replace="~{fragments :: navbar}"></div>
+<main class="container main-container">
+    <div class="d-flex align-items-center mb-5">
+        <div class="p-3 rounded-4 bg-primary bg-opacity-10 me-3 text-info"><i class="bi bi-people-fill fs-1"></i></div>
+        <div>
+            <h2 class="fw-bold mb-0">Manage <span style="color: var(--accent-color);">Students</span></h2>
+            <p class="text-secondary mb-0">Full control over student accounts and credentials.</p>
+        </div>
+    </div>
+
+    <div th:if="${errorMessage}" class="alert alert-danger border-0 bg-danger bg-opacity-10 text-danger mb-4 rounded-4" role="alert">
+        <i class="bi bi-shield-lock-fill me-2"></i> <span th:text="${errorMessage}"></span>
+    </div>
+    <div th:if="${successMessage}" class="alert alert-success border-0 bg-success bg-opacity-10 text-success mb-4 rounded-4" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i> <span th:text="${successMessage}"></span>
+    </div>
+
+    <div class="glass-panel">
+        <div class="table-responsive">
+            <table class="table custom-table align-middle">
+                <thead>
+                <tr>
+                    <th style="width: 80px;">S.N.</th>
+                    <th>Student Profile</th>
+                    <th>Login Email</th>
+                    <th>Contact</th>
+                    <th class="text-center">Controls</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:if="${#lists.isEmpty(students)}">
+                    <td colspan="5" class="text-center py-5">
+                        <i class="bi bi-person-x text-secondary fs-1 d-block mb-3"></i>
+                        <p class="text-secondary fst-italic">No student accounts found.</p>
+                    </td>
+                </tr>
+                <tr th:each="student, iterStat : ${students}">
+                    <td class="fw-bold text-info" th:text="${iterStat.count}">1</td>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <img th:if="${student.profilePicUrl != null}" th:src="@{${student.profilePicUrl}}" class="student-avatar me-3">
+                            <div th:if="${student.profilePicUrl == null}" class="student-avatar me-3 bg-secondary bg-opacity-25 d-flex align-items-center justify-content-center">
+                                <i class="bi bi-person fs-4 text-secondary"></i>
+                            </div>
+                            <div>
+                                <div class="fw-bold" th:text="${student.fullName}">Full Name</div>
+                                <small class="text-secondary">UID: <span th:text="${student.id}"></span></small>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="fw-semibold text-secondary" th:text="${student.username}">email@example.com</td>
+                    <td class="text-secondary" th:text="${student.mobileNumber}">+123456789</td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-sm btn-reset px-3 me-2" data-bs-toggle="modal" data-bs-target="#resetPasswordModal" th:attr="data-student-id=${student.id}, data-student-name=${student.username}"><i class="bi bi-key-fill"></i> Reset</button>
+                        <a th:href="@{/admin/student/delete/{id}(id=${student.id})}" class="btn btn-sm btn-delete px-3" onclick="return confirm('WARNING: This will permanently delete the student data. Continue?');"><i class="bi bi-trash-fill"></i></a>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
+
+<div class="modal fade" id="resetPasswordModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">Security Reset</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form th:action="@{/admin/student/reset-password}" method="post">
+                <div class="modal-body p-4">
+                    <p class="text-secondary mb-4">Resetting for: <span id="studentNameLabel" class="fw-bold" style="color: var(--accent-color);"></span></p>
+                    <input type="hidden" id="modalStudentId" name="userId">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">New Password</label>
+                        <input type="password" class="form-control p-3" name="newPassword" placeholder="••••••••" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-link text-secondary text-decoration-none" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn fw-bold px-4" style="background: var(--accent-color); color: white; border-radius: 12px;">Update Password</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-bs-theme', savedTheme);
+    });
+    var resetPasswordModal = document.getElementById('resetPasswordModal');
+    resetPasswordModal.addEventListener('show.bs.modal', function (event) {
+        var button = event.relatedTarget;
+        resetPasswordModal.querySelector('#modalStudentId').value = button.getAttribute('data-student-id');
+        resetPasswordModal.querySelector('#studentNameLabel').textContent = button.getAttribute('data-student-name');
+    });
+</script>
+</body>
+</html>

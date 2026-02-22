@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexExam - Join the Future</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap" rel="stylesheet">
+
+    <style>
+        /* --- THEME ENGINE --- */
+        :root {
+            --primary-bg: #0f172a;
+            --accent-color: #38bdf8;
+            --text-main: #f8fafc;
+            --text-sec: #94a3b8;
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --input-bg: rgba(255, 255, 255, 0.03);
+        }
+
+        [data-bs-theme="light"] {
+            --primary-bg: #f8fafc;
+            --accent-color: #0284c7;
+            --text-main: #1e293b;
+            --text-sec: #64748b;
+            --glass-bg: rgba(255, 255, 255, 0.85);
+            --glass-border: rgba(15, 23, 42, 0.1);
+            --input-bg: rgba(15, 23, 42, 0.05);
+        }
+
+        body {
+            background-color: var(--primary-bg);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow-x: hidden;
+            transition: all 0.4s ease;
+        }
+
+        /* Background Orbs */
+        .orb {
+            position: absolute; border-radius: 50%;
+            filter: blur(80px); z-index: -1; opacity: 0.2;
+        }
+        .orb-1 { width: 300px; height: 300px; background: var(--accent-color); top: 10%; right: -50px; }
+        .orb-2 { width: 250px; height: 250px; background: #a855f7; bottom: 5%; left: -50px; }
+
+        .register-container {
+            flex: 1; display: flex; align-items: center;
+            justify-content: center; padding: 100px 20px 50px;
+        }
+
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 28px;
+            padding: 2.5rem;
+            width: 100%; max-width: 550px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+            color: var(--text-main);
+        }
+
+        .form-label {
+            font-weight: 600; font-size: 0.85rem;
+            color: var(--text-sec); margin-bottom: 0.5rem;
+        }
+
+        .form-control {
+            background: var(--input-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            color: var(--text-main) !important;
+            padding: 0.7rem 1rem;
+            transition: 0.3s;
+        }
+
+        .form-control::placeholder { color: var(--text-sec); opacity: 0.6; }
+
+        .form-control:focus {
+            background: var(--input-bg);
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.15);
+            color: var(--text-main) !important;
+        }
+
+        .btn-register {
+            background: var(--accent-color);
+            color: white; border: none; border-radius: 12px;
+            padding: 0.8rem; font-weight: 800;
+            width: 100%; transition: 0.3s;
+            margin-top: 1.5rem; text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-register:hover {
+            background: var(--text-main);
+            color: var(--primary-bg);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(56, 189, 248, 0.3);
+        }
+
+        .alert-success {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.2);
+            color: #10b981; border-radius: 15px;
+        }
+
+        [data-bs-theme="light"] .alert-success { color: #059669; }
+
+        a { color: var(--accent-color); text-decoration: none; font-weight: 600; }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<div th:replace="~{fragments :: navbar}"></div>
+
+<div class="register-container">
+    <div class="glass-card">
+        <div class="text-center mb-4">
+            <h2 class="fw-bold mb-1">Create Account</h2>
+            <p class="text-secondary small">Join NexExam and start your journey</p>
+        </div>
+
+        <div th:if="${param.success}" class="alert alert-success text-center py-2 mb-4">
+            <i class="bi bi-check-circle-fill me-2"></i> Registration successful! <a th:href="@{/login}" class="alert-link">Login now</a>.
+        </div>
+
+        <form th:action="@{/register}" th:object="${user}" method="post" enctype="multipart/form-data">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="fullName" class="form-label">Full Name</label>
+                    <input type="text" class="form-control" id="fullName" th:field="*{fullName}" placeholder="John Doe">
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="mobileNumber" class="form-label">Mobile Number</label>
+                    <input type="tel" class="form-control" id="mobileNumber" th:field="*{mobileNumber}" placeholder="+91...">
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="username" class="form-label">Email Address (Login ID)</label>
+                <input type="email" class="form-control" id="username" th:field="*{username}" placeholder="example@gmail.com" required>
+                <p th:if="${#fields.hasErrors('username')}" class="text-danger small mt-1" th:errors="*{username}"></p>
+            </div>
+
+            <div class="mb-3">
+                <label for="profilePicFile" class="form-label">Profile Picture (Optional)</label>
+                <input type="file" class="form-control" id="profilePicFile" name="profilePicFile" accept="image/png, image/jpeg">
+                <div class="form-text text-secondary small">Supported formats: JPG, PNG</div>
+            </div>
+
+            <div class="mb-4">
+                <label for="password" class="form-label">Security Password</label>
+                <input type="password" class="form-control" id="password" th:field="*{password}" placeholder="••••••••" required>
+            </div>
+
+            <button type="submit" class="btn btn-register">
+                Create Student Account <i class="bi bi-person-plus-fill ms-2"></i>
+            </button>
+        </form>
+
+        <div class="text-center mt-4">
+            <p class="text-secondary small">Already have an account? <a th:href="@{/login}">Login here</a></p>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Theme Initializer
+    document.addEventListener('DOMContentLoaded', () => {
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-bs-theme', savedTheme);
+    });
+</script>
+</body>
+</html>

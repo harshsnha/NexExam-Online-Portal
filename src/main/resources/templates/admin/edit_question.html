@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Question - NexExam Admin</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap" rel="stylesheet">
+
+    <style>
+        /* --- THEME ENGINE --- */
+        :root {
+            --primary-bg: #0f172a;
+            --accent-color: #38bdf8;
+            --text-main: #f8fafc;
+            --text-sec: #94a3b8;
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --input-bg: rgba(255, 255, 255, 0.03);
+        }
+
+        [data-bs-theme="light"] {
+            --primary-bg: #f8fafc;
+            --accent-color: #0284c7;
+            --text-main: #1e293b;
+            --text-sec: #64748b;
+            --glass-bg: rgba(255, 255, 255, 0.85);
+            --glass-border: rgba(15, 23, 42, 0.1);
+            --input-bg: rgba(15, 23, 42, 0.03);
+        }
+
+        body {
+            background-color: var(--primary-bg);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: var(--text-main);
+            min-height: 100vh;
+            transition: all 0.4s ease;
+        }
+
+        .orb {
+            position: absolute; border-radius: 50%; filter: blur(100px); z-index: -1; opacity: 0.15;
+        }
+        .orb-1 { width: 400px; height: 400px; background: var(--accent-color); top: -100px; left: -100px; }
+
+        .form-container { padding-top: 100px; padding-bottom: 50px; }
+
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 28px;
+            padding: 2.5rem;
+            color: var(--text-main);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.2);
+        }
+
+        .form-label { font-weight: 600; color: var(--text-sec); font-size: 0.85rem; margin-bottom: 0.5rem; }
+
+        .form-control {
+            background: var(--input-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            color: var(--text-main) !important;
+            padding: 0.75rem 1rem;
+            transition: 0.3s;
+        }
+
+        .form-control:focus {
+            background: rgba(56, 189, 248, 0.05);
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.15);
+        }
+
+        .input-group-text {
+            background: var(--input-bg) !important;
+            border: 1px solid var(--glass-border) !important;
+            color: var(--text-sec);
+            border-radius: 12px 0 0 12px !important;
+        }
+
+        .option-prefix {
+            position: absolute; right: 15px; top: 40px;
+            font-size: 0.7rem; color: var(--accent-color);
+            font-weight: 800; opacity: 0.6;
+        }
+
+        .btn-update {
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 0.8rem 2rem;
+            font-weight: 800;
+            transition: 0.3s;
+        }
+
+        .btn-update:hover { background: var(--text-main); color: var(--primary-bg); transform: translateY(-2px); }
+
+        .btn-cancel {
+            background: var(--input-bg);
+            color: var(--text-main);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 0.8rem 2rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: 0.3s;
+        }
+
+        .btn-cancel:hover { background: rgba(239, 68, 68, 0.1); color: #ef4444; border-color: #ef4444; }
+
+        .header-box { border-left: 4px solid var(--accent-color); padding-left: 15px; margin-bottom: 2rem; }
+    </style>
+</head>
+<body>
+
+<div class="orb orb-1"></div>
+
+<div th:replace="~{fragments :: navbar}"></div>
+
+<div class="container form-container">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="glass-card">
+
+                <div class="header-box">
+                    <h2 class="fw-bold mb-1">Edit <span style="color: var(--accent-color);">Question</span></h2>
+                    <p class="text-secondary small mb-0">Modify question content, options, or marking scheme.</p>
+                </div>
+
+                <form th:action="@{/admin/question/update/{id}(id=${question.id})}" th:object="${question}" method="post">
+
+                    <div class="mb-4">
+                        <label for="text" class="form-label">Question Text</label>
+                        <textarea class="form-control" id="text" th:field="*{text}" rows="3" placeholder="Enter question description..." required></textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3 position-relative">
+                            <label for="option1" class="form-label">Option 1</label>
+                            <input type="text" class="form-control" id="option1" th:field="*{option1}" required>
+                            <span class="option-prefix">CHOICE A</span>
+                        </div>
+                        <div class="col-md-6 mb-3 position-relative">
+                            <label for="option2" class="form-label">Option 2</label>
+                            <input type="text" class="form-control" id="option2" th:field="*{option2}" required>
+                            <span class="option-prefix">CHOICE B</span>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3 position-relative">
+                            <label for="option3" class="form-label">Option 3</label>
+                            <input type="text" class="form-control" id="option3" th:field="*{option3}" required>
+                            <span class="option-prefix">CHOICE C</span>
+                        </div>
+                        <div class="col-md-6 mb-3 position-relative">
+                            <label for="option4" class="form-label">Option 4</label>
+                            <input type="text" class="form-control" id="option4" th:field="*{option4}" required>
+                            <span class="option-prefix">CHOICE D</span>
+                        </div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col-md-6 mb-4">
+                            <label for="correctAnswer" class="form-label">Correct Option (1-4)</label>
+                            <div class="input-group">
+                                <span class="input-group-text border-end-0">
+                                    <i class="bi bi-check2-circle" style="color: var(--accent-color);"></i>
+                                </span>
+                                <input type="number" class="form-control border-start-0" id="correctAnswer" th:field="*{correctAnswer}" min="1" max="4" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-4">
+                            <label for="marks" class="form-label">Marks/Points</label>
+                            <div class="input-group">
+                                <span class="input-group-text border-end-0">
+                                    <i class="bi bi-star-fill text-warning"></i>
+                                </span>
+                                <input type="number" class="form-control border-start-0" id="marks" th:field="*{marks}" min="1" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-3 justify-content-end mt-4">
+                        <a th:href="@{/admin/exam/manage-questions/{id}(id=${question.exam.id})}" class="btn-cancel">
+                            <i class="bi bi-arrow-left me-2"></i>Discard
+                        </a>
+                        <button type="submit" class="btn btn-update">
+                            <i class="bi bi-save2 me-2"></i>Update Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Initialize Theme
+    document.addEventListener('DOMContentLoaded', () => {
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-bs-theme', savedTheme);
+    });
+</script>
+</body>
+</html>

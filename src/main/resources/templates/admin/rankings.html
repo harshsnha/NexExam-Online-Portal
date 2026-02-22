@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Rankings - NexExam</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-bg: #0f172a; --accent-color: #38bdf8; --text-main: #f8fafc;
+            --text-sec: #94a3b8; --glass-bg: rgba(30, 41, 59, 0.45);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+        [data-bs-theme="light"] {
+            --primary-bg: #f8fafc; --accent-color: #0284c7; --text-main: #1e293b;
+            --text-sec: #64748b; --glass-bg: rgba(255, 255, 255, 0.7);
+            --glass-border: rgba(15, 23, 42, 0.1);
+        }
+        body {
+            background-color: var(--primary-bg) !important;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: var(--text-main);
+            background-image: radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.08) 0, transparent 50%),
+                              radial-gradient(at 100% 100%, rgba(56, 189, 248, 0.08) 0, transparent 50%);
+            min-height: 100vh;
+        }
+        .main-container { padding-top: 100px; padding-bottom: 50px; }
+
+        /* Pure Glass Effect for Panel */
+        .glass-panel {
+            background: var(--glass-bg) !important;
+            backdrop-filter: blur(16px) saturate(180%) !important;
+            -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+            border: 1px solid var(--glass-border) !important;
+            border-radius: 24px; padding: 2rem;
+        }
+
+        /* Table Fix - No Black Backgrounds */
+        .table { background: transparent !important; color: var(--text-main) !important; margin: 0; }
+        .table tr, .table td, .table th {
+            background: transparent !important;
+            border-bottom: 1px solid var(--glass-border) !important;
+            color: var(--text-main) !important;
+        }
+        .rank-card:hover { background: rgba(255, 255, 255, 0.03) !important; }
+
+        /* Dropdown Filter Fix - Semi-transparent */
+        .filter-select {
+            background: rgba(30, 41, 59, 0.6) !important;
+            backdrop-filter: blur(10px) !important;
+            color: var(--text-main) !important;
+            border: 1px solid var(--glass-border) !important;
+            border-radius: 12px; padding: 10px 15px;
+        }
+        /* Custom styling for options to prevent default black */
+        .filter-select option { background: #1e293b !important; color: white !important; }
+        [data-bs-theme="light"] .filter-select option { background: white !important; color: black !important; }
+
+        .badge-gold { color: #fbbf24; }
+        .badge-silver { color: #94a3b8; }
+        .badge-bronze { color: #b45309; }
+        .profile-img-sm { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent-color); }
+        .progress { background: rgba(148, 163, 184, 0.15) !important; border-radius: 10px; }
+    </style>
+</head>
+<body>
+<div th:replace="~{fragments :: navbar}"></div>
+<div class="container main-container">
+    <div class="row mb-4 align-items-center">
+        <div class="col-md-6">
+            <h2 class="fw-bold"><i class="bi bi-trophy-fill text-warning me-2"></i>NexExam <span style="color: var(--accent-color);">Leaderboard</span></h2>
+        </div>
+        <div class="col-md-6 text-md-end">
+            <form th:action="@{/admin/rankings}" method="get" class="d-inline-block">
+                <select name="examId" class="form-select filter-select shadow-none" onchange="this.form.submit()">
+                    <option value="">--- Show All Exams (Overall) ---</option>
+                    <option th:each="exam : ${exams}" th:value="${exam.id}" th:text="${exam.title}" th:selected="${exam.id == selectedExamId}"></option>
+                </select>
+            </form>
+        </div>
+    </div>
+    <div class="row justify-content-center">
+        <div class="col-lg-12">
+            <div class="glass-panel shadow-lg">
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead>
+                        <tr style="border-bottom: 2px solid var(--accent-color) !important;">
+                            <th class="py-3" style="color: var(--accent-color) !important; font-weight: 800; letter-spacing: 1px;">RANK</th>
+                            <th class="py-3" style="color: var(--accent-color) !important; font-weight: 800; letter-spacing: 1px;">STUDENT</th>
+                            <th class="py-3" style="color: var(--accent-color) !important; font-weight: 800; letter-spacing: 1px;">EXAM TITLE</th>
+                            <th class="py-3 text-center" style="color: var(--accent-color) !important; font-weight: 800; letter-spacing: 1px;">SCORE %</th>
+                            <th class="py-3 text-end" style="color: var(--accent-color) !important; font-weight: 800; letter-spacing: 1px;">STATUS</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="res, iter : ${rankedResults}" class="rank-card">
+                            <td class="py-4 fw-bold">
+                                <span th:if="${iter.index == 0}" class="badge-gold fs-4"><i class="bi bi-award-fill"></i> 1</span>
+                                <span th:if="${iter.index == 1}" class="badge-silver fs-4"><i class="bi bi-award-fill"></i> 2</span>
+                                <span th:if="${iter.index == 2}" class="badge-bronze fs-4"><i class="bi bi-award-fill"></i> 3</span>
+                                <span th:if="${iter.index > 2}" class="ms-2" style="color: var(--text-sec);" th:text="${iter.count}">4</span>
+                            </td>
+                            <td class="py-4">
+                                <div class="d-flex align-items-center">
+                                    <img th:if="${res.student.profilePicUrl != null}" th:src="@{${res.student.profilePicUrl}}" class="profile-img-sm me-3">
+                                    <i th:if="${res.student.profilePicUrl == null}" class="bi bi-person-circle fs-3 me-3" style="color: var(--text-sec);"></i>
+                                    <span th:text="${res.student.fullName}" class="fw-600">Student Name</span>
+                                </div>
+                            </td>
+                            <td class="py-4" th:text="${res.exam.title}" style="color: var(--text-sec);">Exam Name</td>
+                            <td class="py-4 text-center" style="min-width: 160px;">
+                                <div class="fw-bold mb-1" th:text="${#numbers.formatDecimal((res.scoreAchieved * 100.0 / res.totalMarks), 1, 1) + '%'}">Percentage</div>
+                                <div class="progress" style="height: 6px;">
+                                    <div class="progress-bar bg-info" th:style="'width: ' + (${res.scoreAchieved * 100 / res.totalMarks}) + '%'"></div>
+                                </div>
+                            </td>
+                            <td class="py-4 text-end">
+                                <span th:class="${(res.scoreAchieved * 100 / res.totalMarks) >= 30 ? 'badge bg-success bg-opacity-10 text-success border border-success' : 'badge bg-danger bg-opacity-10 text-danger border border-danger'}"
+                                      th:text="${(res.scoreAchieved * 100 / res.totalMarks) >= 30 ? 'QUALIFIED' : 'FAILED'}">Status</span>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

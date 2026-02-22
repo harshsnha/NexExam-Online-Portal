@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexExam - Future of Testing</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap" rel="stylesheet">
+
+    <style>
+        /* --- THEME ENGINE --- */
+        :root {
+            --primary-bg: #0f172a;
+            --accent-color: #38bdf8;
+            --text-main: #f8fafc;
+            --text-sec: #94a3b8;
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --hero-gradient: radial-gradient(circle at 50% -20%, #1e293b, #0f172a);
+        }
+
+        [data-bs-theme="light"] {
+            --primary-bg: #f8fafc;
+            --accent-color: #0284c7;
+            --text-main: #0f172a;
+            --text-sec: #475569;
+            --glass-bg: rgba(255, 255, 255, 0.7);
+            --glass-border: rgba(15, 23, 42, 0.1);
+            --hero-gradient: radial-gradient(circle at 50% -20%, #f1f5f9, #f8fafc);
+        }
+
+        body {
+            background-color: var(--primary-bg);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: var(--text-main);
+            overflow-x: hidden;
+            transition: background 0.4s ease, color 0.4s ease;
+        }
+
+        .bg-glow {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--hero-gradient);
+            z-index: -1;
+        }
+
+        .hero-section { padding: 10rem 0 6rem; position: relative; }
+
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            color: var(--text-main);
+        }
+
+        .hero-title {
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-weight: 800;
+            background: linear-gradient(to right, var(--text-main), var(--text-sec));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            line-height: 1.1;
+        }
+
+        .btn-modern { padding: 12px 30px; border-radius: 12px; font-weight: 600; transition: 0.3s; }
+
+        /* FIX: Get Started Button Visibility */
+        .btn-primary-custom {
+            background: var(--accent-color) !important;
+            color: white !important;
+            border: none;
+        }
+
+        .btn-primary-custom:hover {
+            transform: scale(1.05) translateY(-3px);
+            box-shadow: 0 10px 20px rgba(56, 189, 248, 0.4);
+            background: var(--text-main) !important;
+            color: var(--primary-bg) !important;
+        }
+
+        .feature-icon {
+            width: 60px; height: 60px;
+            background: rgba(56, 189, 248, 0.1);
+            color: var(--accent-color);
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 15px; font-size: 1.5rem; margin-bottom: 1.5rem;
+        }
+
+        .stats-badge {
+            background: rgba(56, 189, 248, 0.1);
+            color: var(--accent-color);
+            padding: 5px 15px;
+            border-radius: 30px;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            display: inline-block;
+        }
+
+        .float-img {
+            animation: floating 4s ease-in-out infinite;
+            filter: drop-shadow(0 0 25px rgba(56, 189, 248, 0.3));
+        }
+
+        @keyframes floating {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="bg-glow"></div>
+
+<div th:replace="~{fragments :: navbar}"></div>
+
+<div class="hero-section">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <span class="stats-badge fw-bold">🚀 NexExam Live</span>
+
+                <h1 class="hero-title mb-4">Elevate Your <br><span style="color: var(--accent-color);">Exam Experience</span></h1>
+
+                <p class="lead text-secondary mb-5">
+                    A futuristic platform built for high-performance testing. Manage exams, track analytics, and achieve excellence seamlessly.
+                </p>
+
+                <div class="d-flex flex-column align-items-start gap-3">
+                    <div class="d-flex gap-3">
+                        <a th:href="@{/login}" class="btn btn-modern btn-primary-custom shadow">
+                            Get Started <i class="bi bi-arrow-right ms-2"></i>
+                        </a>
+                        <a th:href="@{/register}" class="btn btn-modern btn-outline-secondary">
+                            Create Account
+                        </a>
+                    </div>
+
+                    <p class="ms-2 mt-1 mb-0" style="font-weight: 600; font-size: 1rem; letter-spacing: 0.5px; color: var(--text-sec);">
+                        <span style="color: var(--accent-color);">All The Best</span> 🧿 ✨ 🏆
+                    </p>
+                </div>
+            </div>
+
+            <div class="col-lg-6 d-none d-lg-block text-center">
+                <img th:src="@{/images/go.png}"
+                     alt="NexExam Illustration"
+                     class="img-fluid float-img"
+                     style="max-height: 480px;">
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container py-5">
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="card glass-card h-100 p-4">
+                <div class="feature-icon"><i class="bi bi-mortarboard-fill"></i></div>
+                <h4 class="fw-bold">For Students</h4>
+                <p class="text-secondary">Take AI-integrated timed exams with instant feedback and deep performance analytics.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card glass-card h-100 p-4">
+                <div class="feature-icon" style="color: #a855f7; background: rgba(168, 85, 247, 0.1);"><i class="bi bi-shield-lock-fill"></i></div>
+                <h4 class="fw-bold">Security First</h4>
+                <p class="text-secondary">Anti-cheat monitoring and end-to-end encryption for your valuable data.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card glass-card h-100 p-4">
+                <div class="feature-icon" style="color: #10b981; background: rgba(16, 185, 129, 0.1);"><i class="bi bi-cpu-fill"></i></div>
+                <h4 class="fw-bold">Admin Control</h4>
+                <p class="text-secondary">Robust dashboard to manage subjects, questions, and students in real-time.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<footer class="footer text-center mt-5 py-4 border-top border-secondary border-opacity-10">
+    <p class="text-secondary mb-0">© 2025 NexExam | Developed by Harsh Sinha ❤️</p>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-bs-theme', savedTheme);
+    });
+</script>
+
+</body>
+</html>

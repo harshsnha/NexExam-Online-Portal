@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>NexExam - Verification</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background: #0f172a; color: white; display: flex; align-items: center; justify-content: center; height: 100vh; }
+        .verify-card { background: rgba(255,255,255,0.05); border: 1px solid #38bdf8; border-radius: 20px; padding: 40px; text-align: center; max-width: 450px; width: 90%; }
+        .status-badge { background: #10b981; color: #0f172a; font-weight: 800; padding: 5px 20px; border-radius: 50px; }
+    </style>
+</head>
+<body>
+<div class="verify-card" th:if="${status == 'VERIFIED'}">
+    <h2 class="fw-bold mb-3">System Verified</h2>
+    <span class="status-badge">Official Record Found</span>
+    <hr class="my-4" style="border-color: rgba(255,255,255,0.1)">
+
+    <p class="mb-1 text-secondary">Student Name</p>
+    <h4 class="mb-3" th:text="${result.student.fullName}">Rahul</h4>
+
+    <p class="mb-1 text-secondary">Certificate No</p>
+    <h5 class="mb-3 text-info" th:text="${specialNumber}">NEX-2026-1001</h5>
+
+    <p class="mb-1 text-secondary">Exam Title</p>
+    <h4 th:text="${result.exam.title}">Java Basics</h4>
+
+    <p class="mb-1 text-secondary mt-3">Percentage</p>
+    <h4 class="text-info" th:text="${percentage} + '%'">85%</h4>
+</div>
+
+<div class="verify-card" th:if="${status == 'INVALID'}">
+    <h2 class="text-danger">Verification Failed</h2>
+    <p>This certificate record was not found in NexExam database.</p>
+</div>
+</body>
+</html>

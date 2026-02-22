@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexExam - Student Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary-bg: #0f172a; --accent-color: #38bdf8; --text-main: #f8fafc;
+            --text-sec: #94a3b8; --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Light Mode Colors */
+        [data-bs-theme="light"] {
+            --primary-bg: #f8fafc; --accent-color: #0284c7; --text-main: #1e293b;
+            --text-sec: #64748b; --glass-bg: rgba(15, 23, 42, 0.05);
+            --glass-border: rgba(15, 23, 42, 0.1);
+        }
+
+        body {
+            background-color: var(--primary-bg);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: var(--text-main);
+            transition: all 0.4s ease;
+        }
+
+        .main-container { padding-top: 100px; padding-bottom: 50px; }
+
+        /* KPI & Panels */
+        .glass-panel, .kpi-card {
+            background: var(--glass-bg) !important;
+            backdrop-filter: blur(15px);
+            border: 1px solid var(--glass-border) !important;
+            border-radius: 24px;
+            padding: 1.5rem;
+        }
+
+        /* --- TABLE BLACK BACKGROUND FIX --- */
+        .custom-table { background: transparent !important; border: none !important; }
+        .custom-table tr, .custom-table td, .custom-table th {
+            background: transparent !important;
+            color: var(--text-main) !important;
+            border-bottom: 1px solid var(--glass-border) !important;
+        }
+        .custom-table thead th { color: var(--accent-color) !important; border: none !important; }
+
+        .exam-box {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px; padding: 2rem;
+            transition: 0.3s ease;
+        }
+        .exam-box:hover { border-color: var(--accent-color); transform: translateY(-5px); }
+
+        .btn-initiate {
+            background: var(--accent-color);
+            color: white; border: none; border-radius: 12px;
+            padding: 12px; font-weight: 700;
+        }
+
+        .orb { position: absolute; width: 400px; height: 400px; border-radius: 50%; filter: blur(100px); z-index: -1; opacity: 0.15; }
+    </style>
+</head>
+<body>
+
+<div class="orb" style="background: var(--accent-color); top: 0; right: 0;"></div>
+<div th:replace="~{fragments :: navbar}"></div>
+
+<main class="container main-container">
+    <div class="d-flex align-items-center mb-5">
+        <div class="p-3 rounded-4 bg-info bg-opacity-10 me-3">
+            <i class="bi bi-rocket-takeoff-fill fs-1 text-info"></i>
+        </div>
+        <div>
+            <h2 class="fw-bold mb-0">Welcome, <span th:text="${student.fullName}">Harsh</span>!</h2>
+            <p class="text-secondary mb-0" id="liveClock">System Status: Active</p>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-5">
+        <div class="col-md-4">
+            <div class="kpi-card text-center">
+                <span class="d-block h2 fw-800" th:text="${totalTaken}">0</span>
+                <small class="text-uppercase text-secondary fw-bold">Exams Taken</small>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="kpi-card text-center">
+                <span class="d-block h2 fw-800" th:text="${#numbers.formatDecimal(averageScore, 1, 1) + '%'}">0%</span>
+                <small class="text-uppercase text-secondary fw-bold">Average Score</small>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="kpi-card text-center">
+                <span class="d-block h2 fw-800" th:text="${highestScore} + '%'">0%</span>
+                <small class="text-uppercase text-secondary fw-bold">Best Performance</small>
+            </div>
+        </div>
+    </div>
+
+    <h4 class="fw-bold mb-4 text-info">Live Exams</h4>
+    <div class="row g-4 mb-5">
+        <div th:if="${#lists.isEmpty(availableExams)}" class="col-12 text-center py-5 glass-panel text-secondary">
+            No exams available right now.
+        </div>
+        <div th:each="exam : ${availableExams}" class="col-md-4">
+            <div class="exam-box">
+                <h5 class="fw-bold" th:text="${exam.title}">Exam</h5>
+                <p class="text-secondary small"><i class="bi bi-clock"></i> <span th:text="${exam.durationInMinutes}"></span> Mins</p>
+                <button th:onclick="'goFullscreenAndStart(\'/exam/' + ${exam.id} + '\')'" class="btn btn-initiate w-100 mt-3">Start Exam</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="glass-panel">
+        <h5 class="fw-bold mb-4 text-success">Recent History</h5>
+        <div class="table-responsive">
+            <table class="table custom-table align-middle">
+                <thead>
+                <tr>
+                    <th>EXAM NAME</th>
+                    <th>SCORE</th>
+                    <th>PERCENTAGE</th>
+                    <th class="text-end">ACTION</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="result : ${pastResults}">
+                    <td>
+                        <div class="fw-bold" th:text="${result.exam.title}">Title</div>
+                        <small class="text-secondary" th:text="${#temporals.format(result.submissionTime, 'dd MMM yyyy')}"></small>
+                    </td>
+                    <td th:text="${result.scoreAchieved + ' / ' + result.totalMarks}">0/0</td>
+                    <td>
+                            <span class="badge rounded-pill px-3 py-2"
+                                  th:classappend="${((result.scoreAchieved * 100.0) / result.totalMarks) >= 30 ? 'bg-success bg-opacity-10 text-success' : 'bg-danger bg-opacity-10 text-danger'}"
+                                  th:text="${#numbers.formatDecimal((result.scoreAchieved * 100.0) / result.totalMarks, 1, 1) + '%'}"></span>
+                    </td>
+                    <td class="text-end">
+                        <a th:href="@{/student/review/{id}(id=${result.id})}" class="btn btn-sm btn-outline-info rounded-pill px-3">Review</a>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
+
+<script>
+    // Theme Sync Fix
+    document.addEventListener('DOMContentLoaded', () => {
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-bs-theme', savedTheme);
+    });
+
+    // Time function
+    function updateClock() {
+        const now = new Date();
+        document.getElementById('liveClock').innerText = "System Time: " + now.toLocaleTimeString();
+    }
+    setInterval(updateClock, 1000);
+
+    function goFullscreenAndStart(url) {
+        const elem = document.documentElement;
+        const requestFS = elem.requestFullscreen || elem.webkitRequestFullscreen || elem.msRequestFullscreen;
+        if (requestFS) {
+            requestFS.call(elem).then(() => {
+                setTimeout(() => { window.location.href = url; }, 300);
+            }).catch(() => { window.location.href = url; });
+        } else { window.location.href = url; }
+    }
+</script>
+</body>
+</html>

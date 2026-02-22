@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexExam - Submission Successful</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap" rel="stylesheet">
+
+    <style>
+        /* --- THEME ENGINE --- */
+        :root {
+            --primary-bg: #0f172a;
+            --accent-color: #38bdf8;
+            --text-main: #f8fafc;
+            --text-sec: #94a3b8;
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --card-shadow: rgba(0, 0, 0, 0.5);
+        }
+
+        [data-bs-theme="light"] {
+            --primary-bg: #f8fafc;
+            --accent-color: #0284c7;
+            --text-main: #1e293b;
+            --text-sec: #64748b;
+            --glass-bg: rgba(255, 255, 255, 0.85);
+            --glass-border: rgba(15, 23, 42, 0.1);
+            --card-shadow: rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            background-color: var(--primary-bg);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            transition: all 0.4s ease;
+        }
+
+        .result-container { position: relative; z-index: 10; padding: 50px 0; }
+
+        /* Glass Card */
+        .result-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 32px;
+            padding: 4rem 2rem;
+            box-shadow: 0 25px 50px -12px var(--card-shadow);
+            position: relative;
+            overflow: hidden;
+            color: var(--text-main);
+        }
+
+        /* Success/Fail Glows */
+        .glow-overlay-pass {
+            position: absolute; top: 0; left: 0; width: 100%; height: 8px;
+            background: linear-gradient(90deg, transparent, #10b981, transparent);
+        }
+        .glow-overlay-fail {
+            position: absolute; top: 0; left: 0; width: 100%; height: 8px;
+            background: linear-gradient(90deg, transparent, #ef4444, transparent);
+        }
+
+        .result-icon {
+            font-size: 6rem; margin-bottom: 1.5rem;
+            filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.1));
+        }
+
+        .score-display {
+            font-size: 5.5rem; font-weight: 800; line-height: 1;
+            margin-bottom: 0.5rem; letter-spacing: -2px;
+        }
+
+        .score-raw { font-size: 1.25rem; color: var(--text-sec); font-weight: 600; }
+        .score-raw span.highlight { color: var(--text-main); }
+
+        .progress-custom {
+            height: 12px; background: rgba(148, 163, 184, 0.1);
+            border-radius: 50px; overflow: hidden;
+            margin: 2rem auto; max-width: 400px;
+        }
+
+        .btn-modern {
+            border-radius: 15px; padding: 12px 30px;
+            font-weight: 700; transition: 0.3s;
+            text-transform: uppercase; letter-spacing: 1px;
+        }
+
+        .btn-review { background: var(--accent-color); color: white; border: none; }
+        .btn-review:hover { background: var(--text-main); color: var(--primary-bg); transform: translateY(-3px); }
+
+        .btn-home {
+            background: rgba(var(--accent-color), 0.1);
+            color: var(--text-main);
+            border: 1px solid var(--glass-border);
+        }
+        .btn-home:hover { background: var(--glass-border); }
+
+        .orb {
+            position: absolute; width: 500px; height: 500px; border-radius: 50%;
+            filter: blur(120px); z-index: -1; opacity: 0.15;
+        }
+    </style>
+</head>
+<body>
+
+<div th:replace="~{fragments :: navbar}"></div>
+
+<div class="container result-container">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 text-center">
+
+            <th:block th:with="percentage=${(total > 0) ? (score * 100.0) / total : 0}, isPass=${percentage >= 50}">
+
+                <div class="orb" th:style="|background: ${isPass ? '#10b981' : '#ef4444'}; top: 20%; left: 50%; transform: translate(-50%, -50%);|"></div>
+
+                <div class="result-card">
+                    <div th:class="${isPass ? 'glow-overlay-pass' : 'glow-overlay-fail'}"></div>
+
+                    <div th:if="${isPass}">
+                        <i class="bi bi-trophy-fill text-warning result-icon"></i>
+                        <h1 class="fw-bold mb-2">Excellent Work!</h1>
+                        <p class="text-secondary mb-4">You've cleared the exam with flying colors.</p>
+                    </div>
+                    <div th:unless="${isPass}">
+                        <i class="bi bi-rocket-takeoff-fill text-info result-icon"></i>
+                        <h1 class="fw-bold mb-2">Submission Successful</h1>
+                        <p class="text-secondary mb-4">Every attempt is a step towards mastery. Keep practicing!</p>
+                    </div>
+
+                    <hr class="opacity-10 my-4">
+
+                    <div class="score-display" th:style="|color: ${isPass ? '#10b981' : 'var(--text-main)'}|">
+                        <span th:text="|${#numbers.formatDecimal(percentage, 1, 1)}%|">75.0%</span>
+                    </div>
+                    <div class="score-raw">
+                        Score Achieved: <span class="highlight" th:text="${score}">15</span>
+                        / <span th:text="${total}">20</span> Points
+                    </div>
+
+                    <div class="progress-custom">
+                        <div class="progress-bar"
+                             th:classappend="${isPass ? 'bg-success' : 'bg-danger'}"
+                             role="progressbar"
+                             th:style="|width: ${percentage}%;|"
+                             th:attr="aria-valuenow=${percentage}"
+                             aria-valuemin="0" aria-valuemax="100">
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-wrap justify-content-center gap-3 mt-5">
+                        <a th:href="@{/student/dashboard}" class="btn btn-modern btn-home">
+                            <i class="bi bi-grid-fill me-2"></i>Dashboard
+                        </a>
+                        <a th:if="${resultId != null}" th:href="@{/student/review/{id}(id=${resultId})}" class="btn btn-modern btn-review shadow-sm">
+                            <i class="bi bi-eye-fill me-2"></i>Review Answers
+                        </a>
+                    </div>
+                </div>
+
+            </th:block>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Initialize Theme on Load
+    document.addEventListener('DOMContentLoaded', () => {
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-bs-theme', savedTheme);
+    });
+</script>
+</body>
+</html>

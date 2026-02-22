@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexExam - Official Certificate</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Plus+Jakarta+Sans:wght@400;600;800&family=Great+Vibes&display=swap" rel="stylesheet">
+
+    <style>
+        body { background-color: #f1f5f9; padding: 50px 0; }
+        .certificate-container {
+            width: 900px; margin: 0 auto; background: #fff; padding: 50px;
+            border: 20px solid #0f172a; position: relative;
+            box-shadow: 0 0 50px rgba(0,0,0,0.1);
+            background-image: radial-gradient(circle, #f8fafc 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        .inner-border { border: 2px solid #38bdf8; padding: 30px; height: 100%; }
+        .header-logo { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; color: #0f172a; font-size: 2rem; }
+        .cert-title { font-family: 'Cinzel', serif; font-size: 3.5rem; color: #0f172a; margin: 20px 0; }
+        .recipient-name {
+            font-family: 'Great Vibes', cursive; font-size: 4rem;
+            color: #38bdf8; border-bottom: 2px solid #e2e8f0;
+            display: inline-block; margin: 20px 0; min-width: 400px;
+        }
+        .cert-text { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 1.2rem; color: #475569; margin: 10px 0; }
+        .exam-title { font-weight: 800; color: #0f172a; }
+        .signature-img { max-width: 150px; height: auto; margin-bottom: -15px; }
+        .seal {
+            width: 120px; height: 120px; background: #0f172a; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            color: #38bdf8; font-weight: 800; border: 5px double #38bdf8;
+            position: absolute; bottom: 40px; right: 40px; transform: rotate(-15deg);
+        }
+        .cert-id-box {
+            position: absolute; top: 30px; right: 40px; text-align: right;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        @media print {
+            body { background: none; padding: 0; }
+            .no-print { display: none; }
+            .certificate-container { box-shadow: none; border: 15px solid #0f172a; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container text-center mb-4 no-print">
+    <button onclick="window.print()" class="btn btn-primary btn-lg rounded-pill px-5 shadow">
+        Print Certificate
+    </button>
+</div>
+
+<div class="certificate-container">
+    <div class="cert-id-box">
+        <small style="color: #94a3b8; font-weight: 600;">CERTIFICATE NO:</small><br>
+        <span style="font-weight: 800; color: #0f172a;" th:text="${specialNumber}">ID-101</span>
+    </div>
+
+    <div class="inner-border">
+        <div class="text-center">
+            <div class="header-logo"><span style="color: #38bdf8;">Nex</span>Exam</div>
+            <div class="cert-title">Certificate</div>
+            <p class="cert-text">OF ACHIEVEMENT</p>
+
+            <p class="cert-text mt-4">THIS CERTIFICATE IS PROUDLY PRESENTED TO</p>
+            <div class="recipient-name" th:text="${student.fullName}">Rahul Kumar</div>
+
+            <p class="cert-text mt-4">
+                Has successfully completed the <span class="exam-title" th:text="${result.exam.title}">Java Basics</span>
+                examination with an outstanding performance score of <strong th:text="${percentage} + '%'">85%</strong>.
+            </p>
+
+            <div class="row footer-section align-items-end" style="margin-top: 50px;">
+                <div class="col-4 text-center">
+                    <img th:src="${qrCodeUrl}" style="width: 85px; border: 1px solid #ddd; padding: 2px;">
+                    <div style="font-size: 0.6rem; font-weight: 800; margin-top: 5px; color: #0f172a;">SCAN TO VERIFY</div>
+                    <div class="cert-text small mt-2" th:text="${#temporals.format(result.submissionTime, 'dd MMMM, yyyy')}">Date</div>
+                </div>
+                <div class="col-4">
+                    <div class="seal">OFFICIAL SEAL</div>
+                </div>
+                <div class="col-4 text-center">
+                    <div>
+                        <img th:src="@{/images/signature.png}" class="signature-img" alt="Admin Signature">
+                    </div>
+                    <div style="font-weight: 800; color: #0f172a; border-top: 1px solid #94a3b8;">ADMIN SIGNATURE</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
