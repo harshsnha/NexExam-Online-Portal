@@ -1,4 +1,4 @@
-# 🚀 Online Exam System – Java (Spring Boot)
+# 🚀 NexExam Online Portal – Java (Spring Boot)
 
 <p align="center">
 <img src="https://img.shields.io/badge/Java-17-blue?style=for-the-badge&logo=java&logoColor=white" alt="Java 17">
@@ -7,46 +7,8 @@
 <img src="https://img.shields.io/badge/H2%20Database-lightgrey?style=for-the-badge" alt="H2 Database">
 </p>
 
-A comprehensive **Online Examination System** built using **Spring Boot, Spring Security, Thymeleaf, Bootstrap 5**, and **JPA/Hibernate**.  
+A comprehensive **NexExam Online Portal** built using **Spring Boot, Spring Security, Thymeleaf, Bootstrap 5**, and **JPA/Hibernate**.  
 The platform provides a secure and user-friendly environment for **Admins** and **Students** to manage and take online tests effectively.
-
-✔️ Completely Free  
-✔️ Full Source Code Included
-
----
-
-# 💖 Support & Contact
-
-This project is created by **LazyCoder**.
-
-### 📺 Subscribe to My YouTube Channel
-I post tutorials, Java/Python projects, and Spring Boot content regularly.
-
-👉 **Subscribe Here:**  
-https://www.youtube.com/c/LazyCoderOnline?sub_confirmation=1
-
----
-
-### 🤝 Need Help or Want a Custom Project?
-
-📌 Facing issues with this project?  
-📌 Want a custom Java/Spring Boot/Django project?
-
-**I am available for freelance development.**
-
-📱 **WhatsApp:** https://wa.me/919572181024
-
-<p align="center">
-<a href="https://www.youtube.com/c/LazyCoderOnline?sub_confirmation=1">
-<img src="https://img.shields.io/badge/Subscribe-LazyCoder-red?style=for-the-badge&logo=youtube" >
-</a>
-
-<a href="https://wa.me/919572181024">
-<img src="https://img.shields.io/badge/WhatsApp-Chat%20Now-green?style=for-the-badge&logo=whatsapp" >
-</a>
-</p>
-
----
 
 # 📸 Screenshots
 
