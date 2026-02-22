@@ -34,11 +34,11 @@ The platform provides a secure and user-friendly environment for **Admins** and 
 <td align="center"><b>Manage Exam</b></td>
 </tr>
 <tr>
-<td align="center"><img src="https://github.com/harshsnha/NexExam-Online-Portal/blob/main/uploads/Exam manage.png" width="90%"></td>
+<td align="center"><img src="https://github.com/harshsnha/NexExam-Online-Portal/blob/main/uploads/D%20Exam%20manage.png" width="90%"></td>
 </tr>
 
 <tr>
-<td align="center"><b>Manage Students</b></td>
+<td align="center"><b>Leader Board</b></td>
 </tr>
 <tr>
 <td align="center"><img src="https://github.com/harshsnha/NexExam-Online-Portal/blob/main/uploads/C%20Student%20manage.png" width="90%"></td>
