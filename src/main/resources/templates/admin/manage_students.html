@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Students - NexExam Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+    <script th:inline="none">
+        (function () {
+            var t = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-bs-theme', t);
+        })();
+    </script>
+
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg-void:      #090b14;
+            --bg-surface:   #12162a;
+            --glass:        rgba(18, 22, 42, 0.72);
+            --border-glass: rgba(255, 255, 255, 0.08);
+            --border-strong:rgba(139, 92, 246, 0.2);
+            --text-primary: #eef0f9;
+            --text-muted:   #9099b8;
+            --accent-violet:#8b5cf6;
+            --accent-cyan:  #22d3ee;
+            --accent-gradient: linear-gradient(135deg, #8b5cf6 0%, #22d3ee 100%);
+            --pass: #34d399;
+            --fail: #f87171;
+            --warn: #f59e0b;
+        }
+
+        [data-bs-theme="light"] {
+            --bg-void:      #f4f5fb;
+            --bg-surface:   #ffffff;
+            --glass:        rgba(255, 255, 255, 0.8);
+            --border-glass: rgba(15, 23, 42, 0.08);
+            --border-strong:rgba(124, 58, 237, 0.22);
+            --text-primary: #1b2140;
+            --text-muted:   #5b6489;
+            --accent-violet:#7c3aed;
+            --accent-cyan:  #0891b2;
+        }
+
+        html, body {
+            min-height: 100vh;
+            background: var(--bg-void);
+            font-family: 'DM Sans', sans-serif;
+            color: var(--text-primary);
+            transition: background .4s, color .4s;
+        }
+
+        #bgCanvas {
+            position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 0; pointer-events: none;
+            opacity: 1; transition: opacity .5s;
+        }
+        [data-bs-theme="light"] #bgCanvas { opacity: 0.22; }
+
+        .page-wrap {
+            position: relative; z-index: 10;
+            padding-top: 96px; padding-bottom: 60px;
+        }
+
+        /* ── Header ── */
+        .page-header {
+            display: flex; align-items: center; gap: 18px;
+            margin-bottom: 28px; animation: fadeUp .6s .1s both;
+        }
+
+        .header-icon {
+            width: 54px; height: 54px;
+            background: var(--accent-gradient);
+            border-radius: 15px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.4rem; color: #090b14; flex-shrink: 0;
+            box-shadow: 0 0 20px rgba(139,92,246,.4);
+            animation: floatIcon 3s ease-in-out infinite;
+        }
+
+        @keyframes floatIcon {
+            0%, 100% { transform: translateY(0); }
+            50%      { transform: translateY(-4px); }
+        }
+
+        .page-title {
+            font-family: 'Sora', sans-serif;
+            font-weight: 800; font-size: 1.8rem; letter-spacing: -.5px;
+        }
+
+        .page-title span {
+            background: var(--accent-gradient);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .page-sub { color: var(--text-muted); font-size: .88rem; margin-top: 2px; }
+
+        /* ── Alerts ── */
+        .alert-glass {
+            border-radius: 12px; padding: 12px 16px;
+            font-size: .85rem; display: flex; align-items: center;
+            gap: 9px; margin-bottom: 18px; animation: fadeUp .4s both;
+        }
+
+        .alert-err {
+            background: rgba(248,113,113,.09);
+            border: 1px solid rgba(248,113,113,.22); color: #fca5a5;
+        }
+
+        .alert-ok {
+            background: rgba(52,211,153,.09);
+            border: 1px solid rgba(52,211,153,.22); color: #86efac;
+        }
+
+        /* ── Glass panel ── */
+        .glass-panel {
+            background: var(--glass);
+            border: 1px solid var(--border-glass);
+            border-radius: 22px; padding: 24px;
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            position: relative; overflow: hidden;
+            animation: fadeUp .6s .2s both;
+            transition: background .4s, border-color .4s, box-shadow .35s ease;
+            transform-style: preserve-3d;
+            perspective: 1200px;
+            will-change: transform;
+            box-shadow: 0 20px 55px rgba(0,0,0,.35), 0 0 0 1px rgba(139,92,246,.06) inset;
+        }
+
+        .glass-panel::before {
+            content: ''; position: absolute;
+            top: 0; left: 8%; right: 8%; height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(139,92,246,.55), rgba(34,211,238,.4), transparent);
+        }
+
+        /* Ambient glow orb drifting behind the panel for extra depth */
+        .glass-panel::after {
+            content: '';
+            position: absolute;
+            top: -30%; right: -10%;
+            width: 55%; height: 90%;
+            background: radial-gradient(circle, rgba(139,92,246,.22), transparent 65%);
+            z-index: 0;
+            pointer-events: none;
+            animation: panelGlowDrift 8s ease-in-out infinite;
+        }
+
+        .glass-panel .table-responsive {
+            position: relative;
+            z-index: 1;
+        }
+
+        @keyframes panelGlowDrift {
+            0%, 100% { transform: translate(0,0) scale(1); }
+            50%      { transform: translate(-5%, 6%) scale(1.12); }
+        }
+
+        .glass-panel:hover {
+            box-shadow: 0 30px 80px rgba(139,92,246,.25), 0 0 0 1px rgba(139,92,246,.12) inset;
+        }
+
+        /* ── Table ── */
+        .s-table { width: 100%; border-collapse: collapse; }
+
+        .s-table thead th {
+            font-size: .68rem; font-weight: 700;
+            letter-spacing: 1px; text-transform: uppercase;
+            color: var(--accent-cyan); padding: 0 14px 14px;
+            border-bottom: 1px solid rgba(139,92,246,.2);
+            white-space: nowrap;
+        }
+
+        .s-table tbody tr { transition: background .2s; }
+
+        .s-table tbody tr:hover td {
+            background: rgba(139,92,246,.05) !important;
+        }
+
+        .s-table tbody td {
+            padding: 14px; border-bottom: 1px solid var(--border-glass);
+            vertical-align: middle; color: var(--text-primary); font-size: .88rem;
+        }
+
+        .s-table tbody tr:last-child td { border-bottom: none; }
+
+        /* ── Student avatar ── */
+        .stu-avatar-img {
+            width: 42px; height: 42px; border-radius: 12px;
+            object-fit: cover; border: 2px solid rgba(139,92,246,.3);
+        }
+
+        .stu-avatar-icon {
+            width: 42px; height: 42px; border-radius: 12px;
+            background: rgba(139,92,246,.1);
+            border: 1px solid rgba(139,92,246,.22);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.1rem; color: var(--text-muted); flex-shrink: 0;
+        }
+
+        .stu-name { font-weight: 600; font-size: .9rem; }
+        .stu-uid  { font-size: .72rem; color: var(--text-muted); margin-top: 1px; }
+        .stu-meta { font-size: .68rem; color: var(--text-muted); margin-top: 2px; }
+        .stu-email { font-size: .85rem; color: var(--text-primary); }
+        .stu-secondary-email { font-size: .72rem; color: var(--text-muted); margin-top: 1px; }
+        .stu-mobile { font-size: .85rem; color: var(--text-muted); }
+
+        /* ── Academic details ── */
+        .academic-cell { min-width: 190px; }
+        .academic-course {
+            font-weight: 600;
+            font-size: .84rem;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+        }
+        .academic-line {
+            font-size: .74rem;
+            color: var(--text-muted);
+            margin-bottom: 1px;
+        }
+        .academic-year-badge {
+            display: inline-block;
+            margin-top: 4px;
+            background: rgba(139,92,246,.1);
+            color: var(--accent-violet);
+            border: 1px solid rgba(139,92,246,.25);
+            font-size: .68rem;
+            font-weight: 700;
+            padding: 2px 9px;
+            border-radius: 50px;
+        }
+        .academic-empty {
+            font-size: .85rem;
+            color: var(--text-muted);
+            opacity: .5;
+        }
+
+        /* ── Action buttons ── */
+        .btn-view {
+            background: rgba(34,211,238,.12);
+            color: var(--accent-cyan);
+            border: 1px solid rgba(34,211,238,.28);
+            border-radius: 9px; padding: 6px 14px;
+            font-size: .78rem; font-weight: 600;
+            cursor: pointer; transition: background .25s ease, box-shadow .25s ease, transform .2s ease;
+            display: inline-flex; align-items: center; gap: 5px;
+        }
+
+        .btn-view:hover {
+            background: var(--accent-cyan);
+            color: #090b14;
+            box-shadow: 0 8px 20px rgba(34,211,238,.4);
+            transform: translateY(-3px) scale(1.04);
+            border-color: transparent;
+        }
+
+        .btn-reset {
+            background: rgba(245,158,11,.12);
+            color: var(--warn);
+            border: 1px solid rgba(245,158,11,.28);
+            border-radius: 9px; padding: 6px 14px;
+            font-size: .78rem; font-weight: 600;
+            cursor: pointer; transition: background .25s ease, box-shadow .25s ease, transform .2s ease;
+            display: inline-flex; align-items: center; gap: 5px;
+        }
+
+        .btn-reset:hover {
+            background: var(--warn);
+            color: #090b14;
+            box-shadow: 0 8px 20px rgba(245,158,11,.4);
+            transform: translateY(-3px) scale(1.04);
+            border-color: transparent;
+        }
+
+        .btn-del {
+            background: rgba(248,113,113,.12);
+            color: var(--fail);
+            border: 1px solid rgba(248,113,113,.28);
+            border-radius: 9px; padding: 6px 14px;
+            font-size: .78rem; font-weight: 600;
+            cursor: pointer; transition: background .25s ease, box-shadow .25s ease, transform .2s ease;
+            display: inline-flex; align-items: center; gap: 5px;
+            text-decoration: none;
+        }
+
+        .btn-del:hover {
+            background: var(--fail);
+            box-shadow: 0 8px 20px rgba(248,113,113,.45);
+            color: #090b14;
+            transform: translateY(-3px) scale(1.04);
+            border-color: transparent;
+        }
+
+        /* ── Modal (Reset Password) ── */
+        .modal-content {
+            background: rgba(18,22,42,.97) !important;
+            border: 1px solid rgba(139,92,246,.2) !important;
+            border-radius: 20px !important;
+            backdrop-filter: blur(20px);
+            color: var(--text-primary) !important;
+            animation: modalPop .3s cubic-bezier(.22,1,.36,1);
+        }
+
+        @keyframes modalPop {
+            from { opacity: 0; transform: scale(.94) translateY(10px); }
+            to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        [data-bs-theme="light"] .modal-content {
+            background: rgba(255,255,255,.98) !important;
+            border-color: rgba(124,58,237,.2) !important;
+        }
+
+        .modal-header {
+            border-bottom: 1px solid var(--border-glass) !important;
+            padding: 20px 24px 16px;
+        }
+
+        .modal-title {
+            font-family: 'Sora', sans-serif;
+            font-weight: 700; font-size: 1.1rem;
+        }
+
+        .modal-footer {
+            border-top: 1px solid var(--border-glass) !important;
+            padding: 16px 24px 20px;
+        }
+
+        .modal-input {
+            width: 100%;
+            background: rgba(255,255,255,.03);
+            border: 1px solid rgba(255,255,255,.08);
+            border-radius: 10px; padding: 12px 14px;
+            color: var(--text-primary); font-family: 'DM Sans', sans-serif;
+            font-size: .9rem; outline: none;
+            transition: border-color .2s, box-shadow .2s;
+        }
+
+        [data-bs-theme="light"] .modal-input {
+            background: rgba(15,23,42,.04);
+            border-color: rgba(15,23,42,.12);
+        }
+
+        .modal-input:focus {
+            border-color: rgba(139,92,246,.5);
+            box-shadow: 0 0 0 3px rgba(139,92,246,.12);
+        }
+
+        .modal-label {
+            display: block; font-size: .72rem; font-weight: 600;
+            letter-spacing: .8px; text-transform: uppercase;
+            color: var(--text-muted); margin-bottom: 7px;
+        }
+
+        .btn-modal-submit {
+            background: var(--accent-gradient);
+            color: #090b14; font-family: 'Sora', sans-serif;
+            font-weight: 700; font-size: .88rem;
+            border: none; border-radius: 10px;
+            padding: 9px 22px; cursor: pointer;
+            transition: box-shadow .25s ease, transform .2s ease;
+            box-shadow: 0 0 16px rgba(139,92,246,.35);
+        }
+
+        .btn-modal-submit:hover {
+            box-shadow: 0 10px 26px rgba(139,92,246,.5);
+            transform: translateY(-3px) scale(1.02);
+        }
+
+        .btn-modal-cancel {
+            background: rgba(255,255,255,.03);
+            border: 1px solid var(--border-glass);
+            color: var(--text-muted);
+            font-size: .85rem;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 9px 20px;
+            border-radius: 10px;
+            transition: background .25s ease, color .25s ease, transform .2s ease, box-shadow .25s ease;
+        }
+
+        .btn-modal-cancel:hover {
+            background: rgba(139,92,246,.1);
+            color: var(--text-primary);
+            border-color: rgba(139,92,246,.3);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(139,92,246,.18);
+        }
+
+        /* ── Student Detail Modal — premium 3D card, matches QR/credential style ── */
+        .detail-modal-content {
+            background: var(--glass);
+            backdrop-filter: blur(28px);
+            -webkit-backdrop-filter: blur(28px);
+            border: 1px solid var(--border-strong) !important;
+            border-radius: 26px !important;
+            color: var(--text-primary) !important;
+            position: relative;
+            overflow: hidden;
+            animation: detailPop .4s cubic-bezier(.22,1,.36,1);
+            box-shadow: 0 25px 70px rgba(139,92,246,.3), 0 0 0 1px rgba(139,92,246,.08) inset;
+        }
+
+        .detail-modal-content::before {
+            content: '';
+            position: absolute; inset: 0; padding: 1.5px;
+            border-radius: 26px;
+            background: var(--accent-gradient);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            opacity: .75;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .detail-modal-content::after {
+            content: '';
+            position: absolute; top: -40%; left: -20%;
+            width: 140%; height: 140%;
+            background: radial-gradient(circle, rgba(139,92,246,.28), transparent 60%);
+            z-index: 0;
+            animation: driftGlow 6s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        .detail-header, .detail-body, .detail-footer {
+            position: relative;
+            z-index: 1;
+        }
+
+        @keyframes driftGlow {
+            0%, 100% { transform: translate(0,0) scale(1); }
+            50%      { transform: translate(6%, 4%) scale(1.08); }
+        }
+
+        @keyframes detailPop {
+            from { opacity: 0; transform: scale(.85) translateY(30px) rotateX(-8deg); }
+            to   { opacity: 1; transform: scale(1) translateY(0) rotateX(0); }
+        }
+
+        .detail-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 28px 28px 20px;
+        }
+
+        .detail-avatar-img {
+            width: 68px; height: 68px; border-radius: 18px;
+            object-fit: cover;
+            box-shadow: 0 0 26px rgba(139,92,246,.4);
+        }
+
+        .detail-avatar-icon {
+            width: 68px; height: 68px; border-radius: 18px;
+            background: var(--accent-gradient);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.7rem; color: #090b14;
+            box-shadow: 0 0 26px rgba(139,92,246,.5);
+            animation: floatIcon 3s ease-in-out infinite;
+        }
+
+        .detail-name {
+            font-family: 'Sora', sans-serif;
+            font-weight: 800;
+            font-size: 1.25rem;
+        }
+
+        .detail-uid-badge {
+            display: inline-block;
+            margin-top: 4px;
+            background: rgba(139,92,246,.1);
+            color: var(--accent-violet);
+            border: 1px solid rgba(139,92,246,.25);
+            font-size: .68rem;
+            font-weight: 700;
+            padding: 3px 11px;
+            border-radius: 50px;
+        }
+
+        .detail-close-x {
+            margin-left: auto;
+            background: rgba(255,255,255,.04);
+            border: 1px solid var(--border-glass);
+            width: 34px; height: 34px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all .2s ease;
+            flex-shrink: 0;
+            align-self: flex-start;
+        }
+        .detail-close-x:hover {
+            background: rgba(248,113,113,.14);
+            color: var(--fail);
+            border-color: rgba(248,113,113,.3);
+            transform: rotate(90deg);
+        }
+
+        .detail-body { padding: 4px 28px 28px; }
+
+        .detail-section-label {
+            font-size: .66rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: var(--accent-cyan);
+            margin: 18px 0 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .detail-section-label:first-child { margin-top: 0; }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .detail-field {
+            background: rgba(139,92,246,.05);
+            border: none;
+            border-left: 3px solid var(--accent-violet);
+            border-radius: 8px;
+            padding: 9px 14px;
+        }
+        .detail-field.full { grid-column: 1 / -1; }
+
+        .detail-field-label {
+            font-size: .64rem;
+            font-weight: 700;
+            letter-spacing: .5px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 3px;
+        }
+
+        .detail-field-value {
+            font-size: .88rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            word-break: break-word;
+        }
+
+        .detail-field-value.empty {
+            color: var(--text-muted);
+            font-weight: 400;
+            font-style: italic;
+            opacity: .6;
+        }
+
+        .detail-footer {
+            padding: 18px 28px 26px;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .btn-detail-close {
+            background: var(--accent-gradient);
+            color: #090b14;
+            font-family: 'Sora', sans-serif;
+            font-weight: 700;
+            font-size: .88rem;
+            border: none;
+            border-radius: 12px;
+            padding: 11px 26px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 0 18px rgba(139,92,246,.35);
+            transition: box-shadow .25s ease, transform .2s ease;
+        }
+
+        .btn-detail-close:hover {
+            box-shadow: 0 10px 28px rgba(139,92,246,.5);
+            transform: translateY(-3px) scale(1.02);
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .page-header, .glass-panel, .header-icon { animation: none !important; opacity: 1 !important; transform: none !important; }
+            .glass-panel:hover { transform: none !important; }
+            .glass-panel::after { animation: none !important; }
+            .detail-modal-content, .detail-modal-content::after, .detail-avatar-icon { animation: none !important; }
+        }
+
+        @media (max-width: 576px) {
+            .detail-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="bgCanvas"></canvas>
+<div th:replace="~{navbar :: navbar}"></div>
+
+<main class="container page-wrap">
+
+    <!-- Header -->
+    <div class="page-header">
+        <div class="header-icon"><i class="bi bi-people-fill"></i></div>
+        <div>
+            <div class="page-title">Manage <span>Students</span></div>
+            <div class="page-sub">Full control over student accounts, credentials &amp; academic details.</div>
+        </div>
+    </div>
+
+    <!-- Alerts -->
+    <div th:if="${errorMessage}" class="alert-glass alert-err">
+        <i class="bi bi-shield-lock-fill"></i>
+        <span th:text="${errorMessage}"></span>
+    </div>
+    <div th:if="${successMessage}" class="alert-glass alert-ok">
+        <i class="bi bi-check-circle-fill"></i>
+        <span th:text="${successMessage}"></span>
+    </div>
+
+    <!-- Table panel -->
+    <div class="glass-panel tilt-card">
+        <div class="table-responsive">
+            <table class="s-table">
+                <thead>
+                    <tr>
+                        <th style="width:50px;">#</th>
+                        <th>Student Profile</th>
+                        <th>Login &amp; Email</th>
+                        <th>Contact</th>
+                        <th class="text-center">Controls</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:if="${#lists.isEmpty(students)}">
+                        <td colspan="5" style="text-align:center; padding:50px 0; color:var(--text-muted);">
+                            <i class="bi bi-person-x" style="font-size:2.5rem; display:block; margin-bottom:12px; opacity:.4;"></i>
+                            No student accounts found.
+                        </td>
+                    </tr>
+                    <tr th:each="student, iterStat : ${students}">
+
+                        <td style="font-family:'Sora',sans-serif; font-weight:700; color:var(--accent-cyan);"
+                            th:text="${iterStat.count}">1</td>
+
+                        <td>
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                <img th:if="${student.profilePicUrl != null}"
+                                     th:src="@{${student.profilePicUrl}}"
+                                     class="stu-avatar-img">
+                                <div th:if="${student.profilePicUrl == null}" class="stu-avatar-icon">
+                                    <i class="bi bi-person"></i>
+                                </div>
+                                <div>
+                                    <div class="stu-name" th:text="${student.fullName}">Full Name</div>
+                                    <div class="stu-uid">UID: <span th:text="${student.id}"></span></div>
+                                    <div class="stu-meta" th:if="${student.age != null or student.dateOfBirth != null}">
+                                        <span th:if="${student.age != null}" th:text="'Age ' + ${student.age}"></span>
+                                        <span th:if="${student.age != null and student.dateOfBirth != null}"> &middot; </span>
+                                        <span th:if="${student.dateOfBirth != null}" th:text="${#temporals.format(student.dateOfBirth, 'dd MMM yyyy')}"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+
+                        <td>
+                            <div class="stu-email" th:text="${student.username}">email@example.com</div>
+                            <div class="stu-secondary-email" th:if="${student.emailId != null and !#strings.isEmpty(student.emailId)}">
+                                <i class="bi bi-envelope me-1"></i><span th:text="${student.emailId}"></span>
+                            </div>
+                        </td>
+
+                        <td class="stu-mobile" th:text="${student.mobileNumber != null ? student.mobileNumber : '—'}">+91...</td>
+
+                        <td style="text-align:center; white-space:nowrap;">
+                            <button type="button" class="btn-view me-2"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#studentDetailModal"
+                                    th:attr="data-full-name=${student.fullName},
+                                              data-id=${student.id},
+                                              data-username=${student.username},
+                                              data-email=${student.emailId != null ? student.emailId : ''},
+                                              data-mobile=${student.mobileNumber != null ? student.mobileNumber : ''},
+                                              data-age=${student.age != null ? student.age : ''},
+                                              data-dob=${student.dateOfBirth != null ? #temporals.format(student.dateOfBirth, 'dd MMM yyyy') : ''},
+                                              data-course=${student.course != null ? student.course : ''},
+                                              data-department=${student.department != null ? student.department : ''},
+                                              data-specialization=${student.specialization != null ? student.specialization : ''},
+                                              data-year=${student.yearOfPassout != null ? student.yearOfPassout : ''},
+                                              data-pic=${student.profilePicUrl != null ? student.profilePicUrl : ''}">
+                                <i class="bi bi-eye-fill"></i> View
+                            </button>
+                            <button type="button" class="btn-reset me-2"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#resetPasswordModal"
+                                    th:attr="data-student-id=${student.id}, data-student-name=${student.username}">
+                                <i class="bi bi-key-fill"></i> Reset
+                            </button>
+                            <a th:href="@{/admin/student/delete/{id}(id=${student.id})}"
+                               class="btn-del"
+                               onclick="return confirm('WARNING: This will permanently delete the student. Continue?');">
+                                <i class="bi bi-trash-fill"></i>
+                            </a>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
+
+<!-- Student Detail Modal (View) -->
+<div class="modal fade" id="studentDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="detail-modal-content modal-content">
+            <div class="detail-header">
+                <img id="detailAvatarImg" class="detail-avatar-img" style="display:none;" alt="Profile">
+                <div id="detailAvatarIcon" class="detail-avatar-icon"><i class="bi bi-person"></i></div>
+                <div>
+                    <div class="detail-name" id="detailName">Student Name</div>
+                    <span class="detail-uid-badge" id="detailUidBadge">UID: —</span>
+                </div>
+                <div class="detail-close-x manual-close-btn" data-bs-dismiss="modal" aria-label="Close">
+                    <i class="bi bi-x-lg"></i>
+                </div>
+            </div>
+
+            <div class="detail-body">
+                <div class="detail-section-label"><i class="bi bi-at"></i> Contact &amp; Login</div>
+                <div class="detail-grid">
+                    <div class="detail-field">
+                        <div class="detail-field-label">User ID</div>
+                        <div class="detail-field-value" id="detailUsername">—</div>
+                    </div>
+                    <div class="detail-field">
+                        <div class="detail-field-label">Email Address</div>
+                        <div class="detail-field-value" id="detailEmail">—</div>
+                    </div>
+                    <div class="detail-field">
+                        <div class="detail-field-label">Phone Number</div>
+                        <div class="detail-field-value" id="detailMobile">—</div>
+                    </div>
+                    <div class="detail-field">
+                        <div class="detail-field-label">Age</div>
+                        <div class="detail-field-value" id="detailAge">—</div>
+                    </div>
+                    <div class="detail-field full">
+                        <div class="detail-field-label">Date of Birth</div>
+                        <div class="detail-field-value" id="detailDob">—</div>
+                    </div>
+                </div>
+
+                <div class="detail-section-label"><i class="bi bi-mortarboard"></i> Academic Details</div>
+                <div class="detail-grid">
+                    <div class="detail-field full">
+                        <div class="detail-field-label">Course</div>
+                        <div class="detail-field-value" id="detailCourse">—</div>
+                    </div>
+                    <div class="detail-field">
+                        <div class="detail-field-label">Department</div>
+                        <div class="detail-field-value" id="detailDepartment">—</div>
+                    </div>
+                    <div class="detail-field">
+                        <div class="detail-field-label">Specialization</div>
+                        <div class="detail-field-value" id="detailSpecialization">—</div>
+                    </div>
+                    <div class="detail-field full">
+                        <div class="detail-field-label">Year of Passout</div>
+                        <div class="detail-field-value" id="detailYear">—</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="detail-footer">
+                <button type="button" class="btn-detail-close manual-close-btn" data-bs-dismiss="modal">
+                    <i class="bi bi-arrow-left"></i> Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reset Password Modal -->
+<div class="modal fade" id="resetPasswordModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-shield-lock me-2" style="color:var(--accent-cyan);"></i>
+                    Security Reset
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form th:action="@{/admin/student/reset-password}" method="post">
+                <div class="modal-body" style="padding:20px 24px;">
+                    <p style="color:var(--text-muted); font-size:.85rem; margin-bottom:16px;">
+                        Resetting password for:
+                        <span id="studentNameLabel" style="color:var(--accent-cyan); font-weight:700;"></span>
+                    </p>
+                    <input type="hidden" id="modalStudentId" name="userId">
+                    <div>
+                        <label class="modal-label">New Password</label>
+                        <input type="password" class="modal-input"
+                               name="newPassword" placeholder="••••••••" required>
+                    </div>
+                </div>
+                <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:8px;">
+                    <button type="button" class="btn-modal-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn-modal-submit">
+                        <i class="bi bi-check-lg me-1"></i> Update Password
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Three.js -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script th:inline="none">
+(function () {
+    const canvas = document.getElementById('bgCanvas');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+
+    function isLightTheme() { return document.documentElement.getAttribute('data-bs-theme') === 'light'; }
+    const DARK_BG = 0x090b14, LIGHT_BG = 0xf4f5fb;
+
+    const scene = new THREE.Scene();
+    renderer.setClearColor(isLightTheme() ? LIGHT_BG : DARK_BG, 1);
+    scene.fog = new THREE.FogExp2(isLightTheme() ? LIGHT_BG : DARK_BG, 0.038);
+
+    const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 200);
+    camera.position.set(0, 2, 24);
+    function resize() { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
+    resize(); window.addEventListener('resize', resize);
+
+    scene.add(new THREE.AmbientLight(0x140d40, 1.5));
+    const pl1 = new THREE.PointLight(0x8b5cf6, 2.5, 45); pl1.position.set(-8,8,10); scene.add(pl1);
+    const pl2 = new THREE.PointLight(0x22d3ee, 2, 35);   pl2.position.set(10,-5,8); scene.add(pl2);
+
+    function mat(c,op=1){return new THREE.MeshStandardMaterial({color:c,metalness:.85,roughness:.15,transparent:op<1,opacity:op,emissive:c,emissiveIntensity:.1});}
+
+    const rings=[];
+    [[8,.03,0.25,0.0,0x22d3ee],[6.5,.038,0.7,0.9,0x8b5cf6],[5,.045,1.2,1.8,0x38bdf8],[3.5,.052,0.5,2.6,0xa78bfa]].forEach(([r,t,rx,ry,col])=>{
+        const m=new THREE.Mesh(new THREE.TorusGeometry(r,t,8,140),mat(col,.55)); m.rotation.x=rx; m.rotation.y=ry; scene.add(m); rings.push(m);
+    });
+
+    const icoGeo=new THREE.IcosahedronGeometry(1.1,0);
+    const ico=new THREE.Mesh(icoGeo,new THREE.MeshStandardMaterial({color:0x8b5cf6,metalness:.9,roughness:.1,emissive:0x22d3ee,emissiveIntensity:.35,transparent:true,opacity:.88})); scene.add(ico);
+    const icoW=new THREE.Mesh(icoGeo,new THREE.MeshBasicMaterial({color:0xa78bfa,wireframe:true,transparent:true,opacity:.18})); scene.add(icoW);
+
+    const floaters=[];
+    [[new THREE.OctahedronGeometry(.28,0),0x22d3ee],[new THREE.TetrahedronGeometry(.22,0),0x8b5cf6],[new THREE.IcosahedronGeometry(.18,0),0x38bdf8],[new THREE.OctahedronGeometry(.20,0),0xa78bfa],[new THREE.TetrahedronGeometry(.30,0),0x22d3ee],[new THREE.OctahedronGeometry(.15,0),0x8b5cf6],[new THREE.IcosahedronGeometry(.25,0),0x22d3ee],[new THREE.TetrahedronGeometry(.18,0),0x38bdf8]].forEach(([geo,col])=>{
+        const m=new THREE.Mesh(geo,mat(col,.65)); const a=Math.random()*Math.PI*2,rad=6+Math.random()*6;
+        m.position.set(Math.cos(a)*rad,(Math.random()-.5)*10,Math.sin(a)*rad-5); m.userData={spd:.25+Math.random()*.35,offset:Math.random()*Math.PI*2,rad,a}; scene.add(m); floaters.push(m);
+    });
+
+    const ptPos=new Float32Array(2000*3); for(let i=0;i<ptPos.length;i++) ptPos[i]=(Math.random()-.5)*70;
+    const ptGeo=new THREE.BufferGeometry(); ptGeo.setAttribute('position',new THREE.BufferAttribute(ptPos,3));
+    scene.add(new THREE.Points(ptGeo,new THREE.PointsMaterial({color:0x22d3ee,size:.055,transparent:true,opacity:.4})));
+
+    const grid=new THREE.GridHelper(80,35,0x1a1040,0x1a1040); grid.position.y=-12; grid.material.transparent=true; grid.material.opacity=.28; scene.add(grid);
+
+    let mx=0,my=0,cx=0,cy=0,t=0;
+    window.addEventListener('mousemove',e=>{mx=(e.clientX/innerWidth)*2-1; my=-((e.clientY/innerHeight)*2-1);});
+
+    const themeObserver = new MutationObserver(() => {
+        const light = isLightTheme();
+        renderer.setClearColor(light ? LIGHT_BG : DARK_BG, 1);
+        scene.fog.color.set(light ? LIGHT_BG : DARK_BG);
+    });
+    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-bs-theme'] });
+
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    (function animate(){
+        requestAnimationFrame(animate);
+        if (reduceMotion) { renderer.render(scene, camera); return; }
+        t+=.007;
+        cx+=(mx*.2-cx)*.05; cy+=(my*.15-cy)*.05; camera.position.x=cx*3.5; camera.position.y=2+cy*2; camera.lookAt(0,0,0);
+        rings[0].rotation.x+=.0025; rings[0].rotation.y+=.003;
+        rings[1].rotation.x-=.003;  rings[1].rotation.z+=.002;
+        rings[2].rotation.y+=.005;  rings[2].rotation.z-=.0025;
+        rings[3].rotation.x+=.004;  rings[3].rotation.y-=.003;
+        const pulse=Math.sin(t*1.8)*.07+1; ico.rotation.x+=.005; ico.rotation.y+=.007; icoW.rotation.x=ico.rotation.x; icoW.rotation.y=ico.rotation.y; ico.scale.setScalar(pulse); icoW.scale.setScalar(pulse*1.02);
+        pl1.position.x=Math.sin(t*.65)*9; pl1.position.y=Math.cos(t*.45)*6; pl2.position.x=Math.cos(t*.55)*8; pl2.position.y=Math.sin(t*.75)*5;
+        floaters.forEach(f=>{const d=f.userData,na=d.a+t*d.spd*.1; f.position.x=Math.cos(na)*d.rad; f.position.z=Math.sin(na)*d.rad-5; f.position.y=Math.sin(t*d.spd+d.offset)*2; f.rotation.x+=.013; f.rotation.y+=.011;});
+        renderer.render(scene,camera);
+    })();
+})();
+</script>
+
+<!-- 3D tilt-on-hover -->
+<script th:inline="none">
+(function () {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    document.querySelectorAll('.tilt-card').forEach(card => {
+        card.addEventListener('mousemove', e => {
+            const r = card.getBoundingClientRect();
+            const x = (e.clientX - r.left) / r.width - 0.5;
+            const y = (e.clientY - r.top) / r.height - 0.5;
+            card.style.transform = `perspective(800px) rotateX(${(-y * 7).toFixed(2)}deg) rotateY(${(x * 7).toFixed(2)}deg) translateY(-5px)`;
+        });
+        card.addEventListener('mouseleave', () => { card.style.transform = 'perspective(800px) rotateX(0) rotateY(0) translateY(0)'; });
+    });
+})();
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script th:inline="none">
+    document.getElementById('resetPasswordModal').addEventListener('show.bs.modal', function (event) {
+        var btn = event.relatedTarget;
+        this.querySelector('#modalStudentId').value    = btn.getAttribute('data-student-id');
+        this.querySelector('#studentNameLabel').textContent = btn.getAttribute('data-student-name');
+    });
+
+    // Populate the Student Detail modal from the clicked "View" button's data-* attributes
+    document.getElementById('studentDetailModal').addEventListener('show.bs.modal', function (event) {
+        var btn = event.relatedTarget;
+
+        function setText(id, value, fallback) {
+            var el = document.getElementById(id);
+            if (value && value.trim() !== '') {
+                el.textContent = value;
+                el.classList.remove('empty');
+            } else {
+                el.textContent = fallback || 'Not provided';
+                el.classList.add('empty');
+            }
+        }
+
+        var fullName = btn.getAttribute('data-full-name') || 'Student';
+        var id = btn.getAttribute('data-id') || '—';
+        var pic = btn.getAttribute('data-pic') || '';
+
+        document.getElementById('detailName').textContent = fullName;
+        document.getElementById('detailUidBadge').textContent = 'UID: ' + id;
+
+        var img = document.getElementById('detailAvatarImg');
+        var icon = document.getElementById('detailAvatarIcon');
+        if (pic && pic.trim() !== '') {
+            img.src = pic;
+            img.style.display = 'block';
+            icon.style.display = 'none';
+        } else {
+            img.style.display = 'none';
+            icon.style.display = 'flex';
+        }
+
+        setText('detailUsername', btn.getAttribute('data-username'));
+        setText('detailEmail', btn.getAttribute('data-email'));
+        setText('detailMobile', btn.getAttribute('data-mobile'));
+        setText('detailAge', btn.getAttribute('data-age'));
+        setText('detailDob', btn.getAttribute('data-dob'));
+        setText('detailCourse', btn.getAttribute('data-course'));
+        setText('detailDepartment', btn.getAttribute('data-department'));
+        setText('detailSpecialization', btn.getAttribute('data-specialization'));
+
+        var year = btn.getAttribute('data-year');
+        setText('detailYear', year && year.trim() !== '' ? year : '', 'Not provided');
+    });
+
+    // Fix: move modals to <body> so they aren't trapped inside .glass-panel's
+    // 3D transform context (will-change/perspective creates a containing
+    // block for position:fixed descendants, which breaks modal positioning).
+    document.querySelectorAll('.modal').forEach(function (modalEl) {
+        document.body.appendChild(modalEl);
+    });
+
+    // Belt-and-suspenders: manually close modals on click, in case
+    // data-bs-dismiss doesn't fire for any reason (e.g. a JS/CDN hiccup).
+    document.querySelectorAll('.manual-close-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var modalEl = btn.closest('.modal');
+            if (!modalEl) return;
+            if (window.bootstrap && window.bootstrap.Modal) {
+                var instance = window.bootstrap.Modal.getOrCreateInstance(modalEl);
+                instance.hide();
+            }
+            setTimeout(function () {
+                modalEl.classList.remove('show');
+                modalEl.style.display = 'none';
+                modalEl.setAttribute('aria-hidden', 'true');
+                document.querySelectorAll('.modal-backdrop').forEach(function (el) { el.remove(); });
+                document.body.classList.remove('modal-open');
+                document.body.style.removeProperty('overflow');
+                document.body.style.removeProperty('padding-right');
+            }, 350);
+        });
+    });
+
+    // Cleanup any stray backdrop/body-lock left behind after any modal closes
+    document.addEventListener('hidden.bs.modal', function () {
+        document.querySelectorAll('.modal-backdrop').forEach(function (el) { el.remove(); });
+        document.body.classList.remove('modal-open');
+        document.body.style.removeProperty('overflow');
+        document.body.style.removeProperty('padding-right');
+    });
+</script>
+</body>
+</html>

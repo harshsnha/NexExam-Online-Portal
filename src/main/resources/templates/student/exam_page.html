@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${exam.title}">Exam - NexExam</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+
+    <!-- Flash prevention -->
+    <script th:inline="none">
+        (function () {
+            var t = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-bs-theme', t);
+        })();
+    </script>
+
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg-void:      #090b14;
+            --bg-surface:   #12162a;
+            --glass:        rgba(18, 22, 42, 0.7);
+            --border-glass: rgba(255, 255, 255, 0.08);
+            --text-primary: #eef0f9;
+            --text-muted:   #9099b8;
+            --accent-violet:#8b5cf6;
+            --accent-cyan:  #22d3ee;
+            --accent-gradient: linear-gradient(135deg, #8b5cf6 0%, #22d3ee 100%);
+            --option-bg: rgba(255,255,255,.03);
+            --pass: #34d399;
+            --fail: #f87171;
+        }
+
+        [data-bs-theme="light"] {
+            --bg-void:      #f4f5fb;
+            --bg-surface:   #ffffff;
+            --glass:        rgba(255, 255, 255, 0.82);
+            --border-glass: rgba(15, 23, 42, 0.08);
+            --text-primary: #1b2140;
+            --text-muted:   #5b6489;
+            --accent-violet:#7c3aed;
+            --accent-cyan:  #0891b2;
+            --option-bg: rgba(15,23,42,.04);
+        }
+
+        body {
+            background-color: var(--bg-void) !important;
+            font-family: 'DM Sans', sans-serif;
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            transition: background-color .4s ease, color .4s ease;
+        }
+
+        /* Subtle, non-distracting 3D backdrop — this page is for focused test-taking */
+        #bgCanvas {
+            position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 0; pointer-events: none;
+            opacity: .35;
+        }
+        [data-bs-theme="light"] #bgCanvas { opacity: .18; }
+
+        #startOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-void); z-index: 10000;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        .mobile-block-icon {
+            width: 90px; height: 90px;
+            border-radius: 50%;
+            background: rgba(248,113,113,.1);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 2.6rem; color: var(--fail);
+            margin: 0 auto 1.2rem;
+            border: 2px solid rgba(248,113,113,.3);
+        }
+
+        /* ── Camera check screen ── */
+        #cameraCheckOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-void); z-index: 10001;
+            display: none; align-items: center; justify-content: center;
+        }
+
+        .cam-check-card { max-width: 460px; width: 92%; text-align: center; }
+
+        .cam-frame {
+            position: relative;
+            width: 260px; height: 260px;
+            margin: 0 auto 1.2rem;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 4px solid var(--border-glass);
+            transition: border-color .3s ease, box-shadow .3s ease;
+            background: #000;
+        }
+        .cam-frame.detecting { border-color: var(--accent-cyan); box-shadow: 0 0 0 6px rgba(34,211,238,.12); }
+        .cam-frame.ok { border-color: var(--pass); box-shadow: 0 0 0 6px rgba(52,211,153,.15); }
+        .cam-frame.warn { border-color: var(--fail); box-shadow: 0 0 0 6px rgba(248,113,113,.15); }
+
+        #camVideo {
+            width: 100%; height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1); /* mirror, feels natural */
+        }
+
+        .cam-status-badge {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 8px 18px; border-radius: 50px;
+            font-size: .85rem; font-weight: 700;
+            margin-bottom: 1rem;
+            transition: all .3s ease;
+        }
+        .cam-status-badge.loading { background: rgba(139,92,246,.1); color: var(--accent-violet); }
+        .cam-status-badge.searching { background: rgba(34,211,238,.1); color: var(--accent-cyan); }
+        .cam-status-badge.ok { background: rgba(52,211,153,.1); color: var(--pass); }
+        .cam-status-badge.warn { background: rgba(248,113,113,.1); color: var(--fail); }
+
+        .cam-status-badge .dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: currentColor;
+            animation: dotPulse 1.2s ease-in-out infinite;
+        }
+        @keyframes dotPulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+
+        .btn-proceed:disabled {
+            opacity: .4;
+            cursor: not-allowed;
+            box-shadow: none !important;
+        }
+
+        .exam-header {
+            background: var(--glass);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border-glass);
+            padding: 1rem 0;
+            position: sticky; top: 0; z-index: 1000;
+        }
+
+        /* ── Timer: dedicated wrapper, isolated from the label above it ── */
+        .timer-label {
+            font-size: .68rem;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        .timer-ring-wrap {
+            width: 100px;
+            height: 100px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .timer-badge {
+            font-family: 'JetBrains Mono', 'Courier New', monospace;
+            font-size: 1.3rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            color: var(--accent-cyan);
+        }
+
+        /* ── Theme toggle button (exam page has no navbar, so its own control) ── */
+        .theme-toggle-btn {
+            width: 42px; height: 42px;
+            border-radius: 50%;
+            border: 1px solid var(--border-glass);
+            background: var(--option-bg);
+            color: var(--text-primary);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.05rem;
+            cursor: pointer;
+            transition: background .25s ease, border-color .25s ease, transform .2s ease;
+            flex-shrink: 0;
+        }
+        .theme-toggle-btn:hover {
+            border-color: var(--accent-violet);
+            transform: translateY(-2px);
+        }
+
+        .glass-card {
+            background: var(--glass);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border: 1px solid var(--border-glass);
+            border-radius: 22px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .glass-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 8%; right: 8%; height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(139,92,246,.4), transparent);
+        }
+
+        .question-card { display: none; }
+        .question-card.active { display: block; animation: fadeIn 0.4s ease; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .q-badge {
+            background: var(--accent-gradient);
+            color: #090b14;
+            font-family: 'Sora', sans-serif;
+            font-weight: 700;
+            font-size: .82rem;
+        }
+
+        .option-box {
+            background: var(--option-bg);
+            border: 1px solid var(--border-glass);
+            border-radius: 14px;
+            padding: 1rem 1.5rem;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: background .25s, border-color .25s, transform .15s;
+            display: flex; align-items: center;
+        }
+        .option-box:hover {
+            background: rgba(139, 92, 246, 0.1);
+            border-color: var(--accent-violet);
+            transform: translateX(3px);
+        }
+        .form-check-input:checked ~ span { color: var(--accent-cyan); font-weight: 700; }
+
+        .q-btn {
+            width: 40px; height: 40px; border-radius: 10px;
+            border: 1px solid var(--border-glass);
+            background: transparent; color: var(--text-muted); font-weight: 700;
+            transition: all .2s;
+        }
+        .q-btn:hover { border-color: var(--accent-violet); }
+        .q-btn.active { border-color: var(--accent-cyan); color: var(--accent-cyan); background: rgba(34,211,238,.1); }
+        .q-btn.answered { background: var(--pass) !important; color: #090b14 !important; border: none; }
+
+        .btn-finish {
+            background: rgba(52,211,153,.12);
+            color: var(--pass);
+            border: 1px solid rgba(52,211,153,.3);
+            font-weight: 700;
+            transition: .25s;
+        }
+        .btn-finish:hover { background: var(--pass); color: #090b14; }
+
+        .btn-nav-outline {
+            border: 1px solid var(--border-glass);
+            color: var(--text-primary);
+            background: transparent;
+            transition: .2s;
+        }
+        .btn-nav-outline:hover { border-color: var(--accent-violet); color: var(--accent-violet); }
+
+        .btn-nav-fill {
+            background: var(--accent-gradient);
+            color: #090b14;
+            font-weight: 700;
+            border: none;
+            transition: .25s;
+            box-shadow: 0 0 16px rgba(139,92,246,.3);
+        }
+        .btn-nav-fill:hover { box-shadow: 0 0 26px rgba(139,92,246,.5); transform: translateY(-2px); color: #090b14; }
+
+        .btn-submit-side {
+            background: var(--accent-gradient);
+            color: #090b14;
+            font-weight: 700;
+            border: none;
+            box-shadow: 0 0 16px rgba(139,92,246,.3);
+            transition: .25s;
+        }
+        .btn-submit-side:hover { box-shadow: 0 0 26px rgba(139,92,246,.5); }
+
+        #strikeOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(9, 11, 20, 0.97);
+            z-index: 9999; display: none;
+            align-items: center; justify-content: center;
+            backdrop-filter: blur(20px);
+        }
+        .strike-card {
+            background: var(--bg-surface);
+            border: 2px solid var(--fail);
+            border-radius: 28px;
+            padding: 3rem;
+            text-align: center;
+            max-width: 500px; width: 90%;
+        }
+
+        /* ── Review Summary overlay (shown when "Review Final" is clicked) ── */
+        #reviewSummaryOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(9, 11, 20, 0.95);
+            z-index: 9995; display: none;
+            align-items: center; justify-content: center;
+            backdrop-filter: blur(16px);
+            padding: 20px;
+        }
+        .review-summary-card {
+            max-width: 560px; width: 100%;
+            max-height: 82vh;
+            overflow-y: auto;
+        }
+        .review-legend {
+            display: flex; align-items: center; gap: 18px;
+            font-size: .78rem; color: var(--text-muted);
+            margin-bottom: 1.2rem;
+        }
+        .review-legend .legend-dot {
+            display: inline-block; width: 12px; height: 12px;
+            border-radius: 4px; margin-right: 6px; vertical-align: middle;
+        }
+        .review-legend .legend-dot.answered { background: var(--pass); }
+        .review-legend .legend-dot.unanswered { border: 1px solid var(--border-glass); }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation: none !important; }
+        }
+    </style>
+</head>
+<body oncontextmenu="return false;">
+
+<canvas id="bgCanvas"></canvas>
+
+<div id="startOverlay">
+    <div id="desktopStartCard" class="glass-card text-center shadow-lg" style="max-width: 500px; position: relative; z-index: 10;">
+        <i class="bi bi-shield-lock-fill" style="font-size: 4rem; color: var(--accent-cyan);"></i>
+        <h2 class="fw-bold mt-3" style="font-family:'Sora',sans-serif;" th:text="${exam.title}">Exam Title</h2>
+        <p style="color: var(--text-muted);">Click below to enter secure fullscreen mode and start your exam.</p>
+        <button class="btn btn-lg w-100 rounded-pill fw-bold py-3 mt-3 btn-nav-fill" onclick="openCameraCheck()">START SECURE TEST</button>
+    </div>
+
+    <div id="mobileBlockCard" class="glass-card text-center shadow-lg" style="max-width: 460px; position: relative; z-index: 10; display: none;">
+        <div class="mobile-block-icon"><i class="bi bi-laptop"></i></div>
+        <h2 class="fw-bold mt-1" style="font-family:'Sora',sans-serif;">Desktop Required</h2>
+        <p style="color: var(--text-muted);">
+            This exam uses secure proctoring (fullscreen lock + camera monitoring) which needs a
+            <strong style="color: var(--text-primary);">laptop or desktop computer</strong>.
+        </p>
+        <p style="color: var(--text-muted); font-size: .85rem;">Please switch to a desktop browser to continue.</p>
+    </div>
+</div>
+
+<div id="cameraCheckOverlay">
+    <div class="glass-card cam-check-card">
+        <h3 class="fw-bold mb-1" style="font-family:'Sora',sans-serif;">Camera Verification</h3>
+        <p style="color: var(--text-muted); font-size: .85rem;" class="mb-4">Position your face in the frame to begin proctoring.</p>
+
+        <div class="cam-frame" id="camFrame">
+            <video id="camVideo" autoplay muted playsinline></video>
+        </div>
+
+        <div class="cam-status-badge loading" id="camStatusBadge">
+            <span class="dot"></span>
+            <span id="camStatusText">Loading AI models...</span>
+        </div>
+
+        <div id="camErrorBox" style="display:none; color: var(--fail); font-size: .82rem; margin-bottom: .8rem;">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i>
+            Camera access is required for this exam. Please allow camera permission and try again.
+        </div>
+
+        <button class="btn btn-lg w-100 rounded-pill fw-bold py-3 btn-nav-fill btn-proceed" id="proceedBtn" onclick="proceedToExam()" disabled>
+            <i class="bi bi-arrow-right-circle me-1"></i> Proceed to Exam
+        </button>
+        <button class="btn btn-nav-outline rounded-pill px-4 py-2 mt-3" onclick="retryCameraAccess()" id="retryCamBtn" style="display:none;">
+            <i class="bi bi-arrow-clockwise me-1"></i> Retry Camera Access
+        </button>
+    </div>
+</div>
+
+<div id="strikeOverlay">
+    <div class="strike-card shadow-lg">
+        <i class="bi bi-exclamation-octagon-fill" style="font-size: 5rem; color: var(--fail);"></i>
+        <h2 class="fw-bold mt-3 mb-2" style="font-family:'Sora',sans-serif;">SECURITY ALERT</h2>
+        <p style="color: var(--text-muted);" id="strikeMsg">Strike 1: Fullscreen exit detected. Return now or your exam will be auto-submitted.</p>
+        <button class="btn w-100 rounded-pill py-3 fw-bold mt-3" style="background: var(--fail); color: white; border: none;" onclick="reEnterFullscreen()">RE-ENTER EXAM</button>
+    </div>
+</div>
+
+<!-- Review Summary overlay — shown when "Review Final" is clicked on the last question -->
+<div id="reviewSummaryOverlay">
+    <div class="glass-card review-summary-card shadow-lg">
+        <h4 class="fw-bold mb-1" style="font-family:'Sora',sans-serif;">Review Your Answers</h4>
+        <p style="color: var(--text-muted); font-size: .85rem;" class="mb-3">Tap any question number to jump back and change it.</p>
+        <div class="review-legend">
+            <span><span class="legend-dot answered"></span>Answered</span>
+            <span><span class="legend-dot unanswered"></span>Not answered</span>
+        </div>
+        <div id="reviewSummaryGrid" style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-bottom: 1.6rem;"></div>
+        <div class="d-flex justify-content-between align-items-center" style="gap: 10px;">
+            <button type="button" class="btn btn-nav-outline rounded-pill px-4" onclick="closeReviewSummary()">Back to Exam</button>
+            <button type="button" class="btn btn-submit-side rounded-pill px-4" onclick="confirmManualSubmit()">Submit Exam</button>
+        </div>
+    </div>
+</div>
+
+<!-- Live proctoring widget — pinned, visible throughout the exam -->
+<div id="monitorWidget" style="display:none; position: fixed; bottom: 20px; right: 20px; z-index: 900;">
+    <div id="monitorFrame" style="width: 96px; height: 96px; border-radius: 16px; overflow: hidden; border: 3px solid var(--pass); box-shadow: 0 8px 24px rgba(0,0,0,.4); transition: border-color .3s ease;">
+        <video id="monitorVideo" autoplay muted playsinline style="width:100%; height:100%; object-fit:cover; transform: scaleX(-1);"></video>
+    </div>
+    <div style="text-align:center; font-size:.6rem; font-weight:700; letter-spacing:.5px; color: var(--text-muted); margin-top:4px;">
+        <i class="bi bi-record-circle-fill" style="color: var(--fail); font-size:.5rem;"></i> PROCTORING
+    </div>
+</div>
+
+<header class="exam-header">
+    <div class="container d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center">
+            <img th:if="${student.profilePicUrl != null}" th:src="@{${student.profilePicUrl}}" class="rounded-circle me-3" style="border: 2px solid var(--accent-cyan);" width="45" height="45">
+            <div>
+                <h6 class="mb-0 fw-bold" th:text="${student.fullName}">Rahul</h6>
+                <small style="color: var(--text-muted);" th:text="${exam.title}">Java Basics</small>
+            </div>
+        </div>
+        <div class="text-center">
+            <small class="timer-label">Remaining Time</small>
+            <div class="timer-ring-wrap">
+                <div id="timer" class="timer-badge">--:--</div>
+            </div>
+        </div>
+        <div class="d-flex align-items-center" style="gap: 12px;">
+            <button type="button" id="themeToggleBtn" class="theme-toggle-btn" onclick="toggleExamTheme()" title="Toggle theme">
+                <i class="bi bi-moon-stars-fill" id="themeToggleIcon"></i>
+            </button>
+            <button type="button" onclick="confirmManualSubmit()" class="btn btn-finish rounded-pill fw-bold px-4">Finish Exam</button>
+        </div>
+    </div>
+</header>
+
+<div class="container main-exam-content py-4" style="position: relative; z-index: 10;">
+    <form id="exam-form" th:action="@{/exam/submit}" method="post">
+        <input type="hidden" name="examId" th:value="${exam.id}" />
+        <input type="hidden" id="remainingTimeField" name="remainingTime">
+        <input type="hidden" id="disqualifyReasonField" name="disqualifyReason" value="">
+
+        <div class="row g-4">
+            <div class="col-lg-8">
+                <div th:each="question, iter : ${questions}" class="glass-card question-card" th:id="|q-card-${iter.index}|" th:data-question-index="${iter.index}">
+                    <div class="d-flex justify-content-between mb-4">
+                        <span class="badge q-badge rounded-pill px-3 py-2" th:text="'Question ' + ${iter.count}">Q1</span>
+                        <span style="color: var(--text-muted);" class="small fw-bold" th:text="${question.marks} + ' Pts'">2 Pts</span>
+                    </div>
+                    <h4 class="fw-bold mb-5" th:text="${question.text}">Question Text</h4>
+                    <div class="options-list">
+                        <div class="option-box" th:each="optNum : ${#numbers.sequence(1, 4)}">
+                            <label class="w-100 d-flex align-items-center" th:for="|q${question.id}_o${optNum}|">
+                                <input class="form-check-input me-3" type="radio" th:name="|q_${question.id}|" th:id="|q${question.id}_o${optNum}|" th:value="${optNum}">
+                                <span th:text="${question['option' + optNum]}">Option</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-between mt-4">
+                    <button type="button" id="prev-btn" class="btn btn-nav-outline rounded-pill px-4">Previous</button>
+                    <button type="button" id="next-btn" class="btn btn-nav-fill rounded-pill px-4">Next Question</button>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="glass-card sticky-top" style="top: 100px;">
+                    <h6 class="fw-bold mb-4 text-uppercase small" style="color: var(--text-muted); letter-spacing: 1px;">Navigator</h6>
+                    <div class="palette-grid" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px;">
+                        <button type="button" th:each="q, iter : ${questions}" class="q-btn" th:text="${iter.count}" th:data-question-index="${iter.index}"></button>
+                    </div>
+                    <hr style="border-color: var(--border-glass); opacity: .6;" class="my-4">
+                    <button type="button" onclick="confirmManualSubmit()" class="btn btn-submit-side w-100 rounded-pill py-2">Submit Exam</button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Subtle 3D backdrop -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script th:inline="none">
+(function () {
+    if (typeof THREE === 'undefined') { return; }
+    try {
+    const canvas = document.getElementById('bgCanvas');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+
+    function isLightTheme() { return document.documentElement.getAttribute('data-bs-theme') === 'light'; }
+    const DARK_BG = 0x090b14, LIGHT_BG = 0xf4f5fb;
+
+    const scene = new THREE.Scene();
+    renderer.setClearColor(isLightTheme() ? LIGHT_BG : DARK_BG, 1);
+    scene.fog = new THREE.FogExp2(isLightTheme() ? LIGHT_BG : DARK_BG, 0.05);
+
+    const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 200);
+    camera.position.set(0, 0, 20);
+    function resize() { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
+    resize(); window.addEventListener('resize', resize);
+
+    scene.add(new THREE.AmbientLight(0x140d40, 1.3));
+    const pl1 = new THREE.PointLight(0x8b5cf6, 1.8, 40); pl1.position.set(-8,6,8); scene.add(pl1);
+    const pl2 = new THREE.PointLight(0x22d3ee, 1.5, 30); pl2.position.set(8,-4,6); scene.add(pl2);
+
+    // Slow, calm, far-away rings — background ambience, not a focal point
+    const rings = [];
+    var ringData = [[9,.02,0.2,0,0x22d3ee],[7,.025,0.6,0.7,0x8b5cf6]];
+    ringData.forEach(function (d) {
+        var r=d[0],t=d[1],rx=d[2],ry=d[3],col=d[4];
+        var m = new THREE.Mesh(new THREE.TorusGeometry(r,t,8,120), new THREE.MeshStandardMaterial({ color: col, metalness:.8, roughness:.2, transparent:true, opacity:.35, emissive: col, emissiveIntensity:.1 }));
+        m.rotation.x = rx; m.rotation.y = ry; scene.add(m); rings.push(m);
+    });
+
+    let t = 0;
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const themeObserver = new MutationObserver(function () {
+        var light = isLightTheme();
+        renderer.setClearColor(light ? LIGHT_BG : DARK_BG, 1);
+        scene.fog.color.set(light ? LIGHT_BG : DARK_BG);
+    });
+    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-bs-theme'] });
+
+    (function animate() {
+        requestAnimationFrame(animate);
+        if (reduceMotion) { renderer.render(scene, camera); return; }
+        t += .003;
+        rings[0].rotation.x += .0008; rings[0].rotation.y += .001;
+        rings[1].rotation.x -= .001; rings[1].rotation.z += .0007;
+        renderer.render(scene, camera);
+    })();
+    } catch (err) {
+        console.error('[NexExam 3D] Exam background failed:', err);
+    }
+})();
+</script>
+
+<script th:src="@{/js/exam-timer.js}" th:inline="none"></script>
+<script th:inline="javascript">
+    // ── Unified strike system ── fullscreen exits AND AI violations both count here.
+    // Strike 1 & 2 = warning, Strike 3 = auto-submit (disqualified).
+    let strikeCount = 0;
+    const examForm = document.getElementById('exam-form');
+    const startOverlay = document.getElementById('startOverlay');
+    const strikeOverlay = document.getElementById('strikeOverlay');
+    const strikeMsg = document.getElementById('strikeMsg');
+
+    // ── Step 1: Mobile/tablet block ──
+    // Not 100% foolproof (user-agent can be spoofed), but a solid practical
+    // deterrent — real proctoring (fullscreen lock, camera) needs a real desktop.
+    function isMobileDevice() {
+        const uaMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const smallScreen = Math.min(window.innerWidth, window.innerHeight) < 700;
+        const touchOnly = ('ontouchstart' in window) && !window.matchMedia('(pointer:fine)').matches;
+        return uaMobile || (smallScreen && touchOnly);
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        if (isMobileDevice()) {
+            document.getElementById('desktopStartCard').style.display = 'none';
+            document.getElementById('mobileBlockCard').style.display = 'block';
+        }
+    });
+
+    // ── Step 2: Camera check (face verification before exam starts) ──
+    const cameraCheckOverlay = document.getElementById('cameraCheckOverlay');
+    const camVideo = document.getElementById('camVideo');
+    const camFrame = document.getElementById('camFrame');
+    const camStatusBadge = document.getElementById('camStatusBadge');
+    const camStatusText = document.getElementById('camStatusText');
+    const camErrorBox = document.getElementById('camErrorBox');
+    const proceedBtn = document.getElementById('proceedBtn');
+    const retryCamBtn = document.getElementById('retryCamBtn');
+
+    let cameraStream = null;      // kept alive and reused for live monitoring during the exam
+    let modelsReady = false;
+    let detectionTimer = null;
+    let monitorDetectionTimer = null;
+    let consecutiveHits = 0;
+
+    async function loadFaceModels() {
+        if (modelsReady) return;
+        const MODEL_URL = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights';
+        await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+        modelsReady = true;
+    }
+
+    function setCamStatus(mode, text) {
+        camStatusBadge.className = 'cam-status-badge ' + mode;
+        camStatusText.textContent = text;
+        camFrame.className = 'cam-frame ' + (mode === 'ok' ? 'ok' : (mode === 'warn' ? 'warn' : 'detecting'));
+    }
+
+    async function openCameraCheck() {
+        startOverlay.style.display = 'none';
+        cameraCheckOverlay.style.display = 'flex';
+        camErrorBox.style.display = 'none';
+        retryCamBtn.style.display = 'none';
+        proceedBtn.disabled = true;
+        consecutiveHits = 0;
+        setCamStatus('loading', 'Loading AI models...');
+
+        try {
+            await loadFaceModels();
+        } catch (err) {
+            console.error('[NexExam Proctoring] Face model load failed:', err);
+            setCamStatus('warn', 'AI model failed to load');
+            camErrorBox.style.display = 'block';
+            camErrorBox.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1"></i> Could not load face-detection AI. Check your internet connection and retry.';
+            retryCamBtn.style.display = 'inline-block';
+            return;
+        }
+
+        try {
+            cameraStream = await navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 320 }, audio: false });
+            camVideo.srcObject = cameraStream;
+            setCamStatus('searching', 'Detecting your face...');
+            startDetectionLoop();
+        } catch (err) {
+            console.error('[NexExam Proctoring] Camera access denied:', err);
+            setCamStatus('warn', 'Camera access denied');
+            camErrorBox.style.display = 'block';
+            retryCamBtn.style.display = 'inline-block';
+        }
+    }
+
+    function retryCameraAccess() {
+        openCameraCheck();
+    }
+
+    function startDetectionLoop() {
+        if (detectionTimer) clearInterval(detectionTimer);
+        const opts = new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 });
+
+        detectionTimer = setInterval(async function () {
+            if (!camVideo.videoWidth) return;
+            try {
+                const result = await faceapi.detectSingleFace(camVideo, opts);
+                if (result) {
+                    consecutiveHits++;
+                    setCamStatus('searching', 'Face detected — confirming...');
+                    if (consecutiveHits >= 3) {
+                        setCamStatus('ok', 'Face verified ✓');
+                        proceedBtn.disabled = false;
+                    }
+                } else {
+                    consecutiveHits = 0;
+                    proceedBtn.disabled = true;
+                    setCamStatus('warn', 'Center your face in the frame');
+                }
+            } catch (e) { /* transient — ignore single-frame errors */ }
+        }, 450);
+    }
+
+    function proceedToExam() {
+        if (detectionTimer) clearInterval(detectionTimer);
+        cameraCheckOverlay.style.display = 'none';
+        initiateSecureExam();
+        // Camera stream stays open (see monitorWidget) for live proctoring during the exam.
+    }
+
+    // ── Step 3: Live monitoring during the exam ──
+    // Reuses the same camera stream from the check screen — no second permission prompt.
+    function startLiveMonitoring() {
+        if (!cameraStream || !modelsReady) return;
+
+        const monitorWidget = document.getElementById('monitorWidget');
+        const monitorVideo = document.getElementById('monitorVideo');
+        const monitorFrame = document.getElementById('monitorFrame');
+
+        monitorVideo.srcObject = cameraStream;
+        monitorWidget.style.display = 'block';
+
+        const opts = new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 });
+        let badReadings = 0;   // debounce — avoid false positives from a single bad frame
+
+        monitorDetectionTimer = setInterval(async function () {
+            if (!monitorVideo.videoWidth) return;
+            try {
+                const results = await faceapi.detectAllFaces(monitorVideo, opts);
+
+                if (results.length === 0) {
+                    badReadings++;
+                    monitorFrame.style.borderColor = 'var(--fail)';
+                    if (badReadings >= 2) {
+                        badReadings = 0;
+                        triggerStrike('No face detected in camera. Stay visible at all times.', 'no_face_detected');
+                    }
+                } else if (results.length > 1) {
+                    badReadings = 0;
+                    monitorFrame.style.borderColor = 'var(--fail)';
+                    triggerStrike('Multiple people detected in camera frame.', 'multiple_faces_detected');
+                } else {
+                    badReadings = 0;
+                    monitorFrame.style.borderColor = 'var(--pass)';
+                }
+            } catch (e) { /* transient — ignore single-frame errors */ }
+        }, 4000);
+    }
+
+    function triggerFullscreen() {
+        const elem = document.documentElement;
+        if (elem.requestFullscreen) { elem.requestFullscreen(); }
+        else if (elem.webkitRequestFullscreen) { elem.webkitRequestFullscreen(); }
+        else if (elem.msRequestFullscreen) { elem.msRequestFullscreen(); }
+    }
+
+    function initiateSecureExam() {
+        triggerFullscreen();
+        startOverlay.style.display = 'none';
+        var durationInMinutes = [[${exam.durationInMinutes}]];
+        var timerDisplay = document.getElementById('timer');
+        if(typeof startTimer === 'function') {
+            startTimer(durationInMinutes, timerDisplay, examForm);
+        }
+        startLiveMonitoring();
+    }
+
+    function reEnterFullscreen() {
+        strikeOverlay.style.display = 'none';
+        triggerFullscreen();
+    }
+
+    function finalSubmit() {
+        const timeLeft = document.getElementById('timer').innerText;
+        document.getElementById('remainingTimeField').value = timeLeft;
+        if (monitorDetectionTimer) clearInterval(monitorDetectionTimer);
+        if (cameraStream) cameraStream.getTracks().forEach(function (t) { t.stop(); });
+        if(document.fullscreenElement) document.exitFullscreen();
+        examForm.submit();
+    }
+
+    // Central strike handler — called by BOTH fullscreen-exit and AI violations
+    function triggerStrike(reasonText, disqualifyReason) {
+        strikeCount++;
+        document.getElementById('disqualifyReasonField').value = disqualifyReason || '';
+
+        if (strikeCount >= 3) {
+            finalSubmit();
+            return;
+        }
+
+        strikeMsg.textContent = 'Strike ' + strikeCount + ': ' + reasonText + ' — ' + (3 - strikeCount) + ' more strike(s) and your exam will be auto-submitted.';
+        strikeOverlay.style.display = 'flex';
+    }
+
+    document.addEventListener('fullscreenchange', () => {
+        if (!document.fullscreenElement && startOverlay.style.display === 'none') {
+            triggerStrike('Fullscreen exit detected. Return to fullscreen immediately.', 'fullscreen_exit');
+        }
+    });
+
+    function confirmManualSubmit() {
+        if(confirm("Finish the exam?")) {
+            finalSubmit();
+        }
+    }
+
+    // ── Theme toggle — exam page has its own minimal header, no navbar included ──
+    function applyExamThemeIcon() {
+        var icon = document.getElementById('themeToggleIcon');
+        if (!icon) return;
+        var isLight = document.documentElement.getAttribute('data-bs-theme') === 'light';
+        icon.className = isLight ? 'bi bi-sun-fill' : 'bi bi-moon-stars-fill';
+    }
+
+    function toggleExamTheme() {
+        var current = document.documentElement.getAttribute('data-bs-theme');
+        var next = current === 'light' ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-bs-theme', next);
+        localStorage.setItem('theme', next);
+        applyExamThemeIcon();
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        applyExamThemeIcon();
+
+        const questions = document.querySelectorAll('.question-card');
+        const paletteBtns = document.querySelectorAll('.q-btn');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const reviewSummaryOverlay = document.getElementById('reviewSummaryOverlay');
+        const reviewSummaryGrid = document.getElementById('reviewSummaryGrid');
+        let currentIdx = 0;
+
+        function showQ(idx) {
+            questions.forEach(q => q.classList.remove('active'));
+            paletteBtns.forEach(b => b.classList.remove('active'));
+            questions[idx].classList.add('active');
+            paletteBtns[idx].classList.add('active');
+            currentIdx = idx;
+            prevBtn.style.visibility = (idx === 0) ? 'hidden' : 'visible';
+            nextBtn.innerHTML = (idx === questions.length - 1) ? 'Review Final' : 'Next Question';
+        }
+
+        // Builds the answered/unanswered grid and opens the review overlay.
+        // Fixes the old bug where "Review Final" tried to showQ(currentIdx + 1)
+        // on the last question — an index that doesn't exist, so nothing happened.
+        function openReviewSummary() {
+            reviewSummaryGrid.innerHTML = '';
+            questions.forEach((q, idx) => {
+                const answered = paletteBtns[idx].classList.contains('answered');
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'q-btn' + (answered ? ' answered' : '');
+                btn.textContent = idx + 1;
+                btn.addEventListener('click', function () {
+                    reviewSummaryOverlay.style.display = 'none';
+                    showQ(idx);
+                });
+                reviewSummaryGrid.appendChild(btn);
+            });
+            reviewSummaryOverlay.style.display = 'flex';
+        }
+
+        window.closeReviewSummary = function () {
+            reviewSummaryOverlay.style.display = 'none';
+        };
+
+        nextBtn.addEventListener('click', () => {
+            if (currentIdx < questions.length - 1) {
+                showQ(currentIdx + 1);
+            } else {
+                openReviewSummary();
+            }
+        });
+        prevBtn.addEventListener('click', () => { if(currentIdx > 0) showQ(currentIdx - 1); });
+        paletteBtns.forEach(btn => btn.addEventListener('click', () => showQ(parseInt(btn.getAttribute('data-question-index')))));
+
+        document.querySelectorAll('input[type="radio"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                const idx = this.closest('.question-card').getAttribute('data-question-index');
+                document.querySelector(`.q-btn[data-question-index="${idx}"]`).classList.add('answered');
+            });
+        });
+        showQ(0);
+    });
+</script>
+</body>
+</html>

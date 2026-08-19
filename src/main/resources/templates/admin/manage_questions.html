@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexExam - Question Manager</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+    <script th:inline="none">
+        (function () {
+            var t = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-bs-theme', t);
+        })();
+    </script>
+
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg-void:      #090b14;
+            --bg-surface:   #12162a;
+            --glass:        rgba(18, 22, 42, 0.72);
+            --border-glass: rgba(255, 255, 255, 0.08);
+            --text-primary: #eef0f9;
+            --text-muted:   #9099b8;
+            --accent-violet:#8b5cf6;
+            --accent-cyan:  #22d3ee;
+            --accent-gradient: linear-gradient(135deg, #8b5cf6 0%, #22d3ee 100%);
+            --pass: #34d399;
+            --fail: #f87171;
+            --warn: #f59e0b;
+        }
+
+        [data-bs-theme="light"] {
+            --bg-void:      #f4f5fb;
+            --bg-surface:   #ffffff;
+            --glass:        rgba(255, 255, 255, 0.8);
+            --border-glass: rgba(15, 23, 42, 0.08);
+            --text-primary: #1b2140;
+            --text-muted:   #5b6489;
+            --accent-violet:#7c3aed;
+            --accent-cyan:  #0891b2;
+        }
+
+        html, body {
+            min-height: 100vh;
+            background: var(--bg-void);
+            font-family: 'DM Sans', sans-serif;
+            color: var(--text-primary);
+            transition: background .4s, color .4s;
+        }
+
+        #bgCanvas {
+            position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 0; pointer-events: none;
+            opacity: 1; transition: opacity .5s;
+        }
+        [data-bs-theme="light"] #bgCanvas { opacity: 0.22; }
+
+        .page-wrap {
+            position: relative; z-index: 10;
+            padding-top: 96px; padding-bottom: 60px;
+        }
+
+        /* ── Header ── */
+        .page-header {
+            display: flex; align-items: center;
+            justify-content: space-between; flex-wrap: wrap;
+            gap: 14px; margin-bottom: 26px;
+            animation: fadeUp .6s .1s both;
+        }
+
+        .page-title {
+            font-family: 'Sora', sans-serif;
+            font-weight: 800; font-size: 1.8rem; letter-spacing: -.5px;
+        }
+
+        .page-title span {
+            background: var(--accent-gradient);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .page-sub { color: var(--text-muted); font-size: .85rem; margin-top: 3px; }
+        .page-sub strong { color: var(--text-primary); }
+
+        /* ── New Question button ── */
+        .btn-new {
+            background: var(--accent-gradient);
+            color: #090b14;
+            font-family: 'Sora', sans-serif;
+            font-weight: 700; font-size: .88rem;
+            border: none; border-radius: 11px;
+            padding: 10px 20px; cursor: pointer;
+            text-decoration: none;
+            display: inline-flex; align-items: center; gap: 7px;
+            transition: box-shadow .2s, transform .15s;
+            box-shadow: 0 0 18px rgba(139,92,246,.3);
+            animation: fadeUp .6s .15s both;
+        }
+
+        .btn-new:hover {
+            box-shadow: 0 0 30px rgba(139,92,246,.5);
+            transform: translateY(-2px);
+            color: #090b14;
+        }
+
+        /* ── Alerts ── */
+        .alert-glass {
+            border-radius: 12px; padding: 12px 16px;
+            font-size: .85rem; display: flex;
+            align-items: center; gap: 9px;
+            margin-bottom: 18px; animation: fadeUp .4s both;
+        }
+
+        .alert-glass button.cls {
+            margin-left: auto; background: none; border: none;
+            color: inherit; opacity: .7; cursor: pointer; font-size: 1rem;
+            padding: 0; line-height: 1;
+        }
+
+        .alert-err {
+            background: rgba(248,113,113,.09);
+            border: 1px solid rgba(248,113,113,.22); color: #fca5a5;
+        }
+
+        .alert-ok {
+            background: rgba(52,211,153,.09);
+            border: 1px solid rgba(52,211,153,.22); color: #86efac;
+        }
+
+        /* ── Glass panel ── */
+        .glass-panel {
+            background: var(--glass);
+            border: 1px solid var(--border-glass);
+            border-radius: 22px; padding: 24px;
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            position: relative; overflow: hidden;
+            animation: fadeUp .6s .2s both;
+            transition: background .4s, border-color .4s, box-shadow .3s;
+            transform-style: preserve-3d;
+            perspective: 1200px;
+            will-change: transform;
+        }
+
+        .glass-panel::before {
+            content: ''; position: absolute;
+            top: 0; left: 8%; right: 8%; height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(139,92,246,.4), transparent);
+        }
+
+        /* ── Table ── */
+        .q-table { width: 100%; border-collapse: collapse; }
+
+        .q-table thead th {
+            font-size: .68rem; font-weight: 700;
+            letter-spacing: 1px; text-transform: uppercase;
+            color: var(--accent-cyan); padding: 0 14px 14px;
+            border-bottom: 1px solid rgba(139,92,246,.2);
+        }
+
+        .q-table tbody tr { transition: background .2s; }
+
+        .q-table tbody tr:hover td {
+            background: rgba(139,92,246,.05) !important;
+        }
+
+        .q-table tbody td {
+            padding: 15px 14px;
+            border-bottom: 1px solid var(--border-glass);
+            vertical-align: middle;
+            color: var(--text-primary); font-size: .88rem;
+        }
+
+        .q-table tbody tr:last-child td { border-bottom: none; }
+
+        .question-text {
+            max-width: 420px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-weight: 500;
+        }
+
+        /* ── Badges ── */
+        .marks-badge {
+            display: inline-flex; align-items: center; gap: 5px;
+            background: rgba(139,92,246,.12);
+            color: var(--accent-violet);
+            padding: 5px 12px; border-radius: 8px;
+            font-weight: 700; font-size: .82rem;
+            border: 1px solid rgba(139,92,246,.22);
+        }
+
+        .ans-badge {
+            display: inline-block;
+            background: rgba(52,211,153,.12);
+            color: var(--pass);
+            padding: 5px 12px; border-radius: 8px;
+            font-weight: 700; font-size: .82rem;
+            border: 1px solid rgba(52,211,153,.22);
+        }
+
+        /* ── Action buttons ── */
+        .btn-act {
+            width: 34px; height: 34px;
+            display: inline-flex; align-items: center; justify-content: center;
+            border-radius: 9px; text-decoration: none;
+            border: 1px solid var(--border-glass);
+            transition: transform .2s, box-shadow .2s, background .2s;
+            font-size: .9rem;
+        }
+
+        .btn-act:hover { transform: translateY(-2px); }
+
+        .btn-edit {
+            background: rgba(245,158,11,.12); color: var(--warn);
+            border-color: rgba(245,158,11,.25);
+        }
+        .btn-edit:hover { box-shadow: 0 0 12px rgba(245,158,11,.35); color: var(--warn); }
+
+        .btn-del {
+            background: rgba(248,113,113,.12); color: var(--fail);
+            border-color: rgba(248,113,113,.25);
+        }
+        .btn-del:hover { box-shadow: 0 0 12px rgba(248,113,113,.35); color: var(--fail); }
+
+        /* ── Back button ── */
+        .btn-return {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: var(--glass);
+            color: var(--text-primary);
+            border: 1px solid var(--border-glass);
+            border-radius: 50px; padding: 9px 20px;
+            font-size: .88rem; font-weight: 500;
+            text-decoration: none;
+            backdrop-filter: blur(12px);
+            transition: background .2s, border-color .2s, color .2s, transform .15s;
+            animation: fadeUp .6s .35s both;
+        }
+
+        .btn-return:hover {
+            background: rgba(139,92,246,.1);
+            border-color: rgba(139,92,246,.3);
+            color: var(--accent-cyan);
+            transform: translateX(-3px);
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .page-header, .btn-new, .glass-panel, .btn-return { animation: none !important; opacity: 1 !important; transform: none !important; }
+            .glass-panel:hover { transform: none !important; }
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="bgCanvas"></canvas>
+<div th:replace="~{navbar :: navbar}"></div>
+
+<main class="container page-wrap">
+
+    <!-- Alerts -->
+    <div th:if="${errorMessage}" class="alert-glass alert-err">
+        <i class="bi bi-exclamation-octagon-fill"></i>
+        <span><strong>Error:</strong> <span th:text="${errorMessage}"></span></span>
+        <button class="cls" onclick="this.parentElement.remove()">✕</button>
+    </div>
+
+    <div th:if="${successMessage}" class="alert-glass alert-ok">
+        <i class="bi bi-check-circle-fill"></i>
+        <span th:text="${successMessage}"></span>
+        <button class="cls" onclick="this.parentElement.remove()">✕</button>
+    </div>
+
+    <!-- Header -->
+    <div class="page-header">
+        <div>
+            <div class="page-title">Question <span>Manager</span></div>
+            <div class="page-sub">
+                Exam: <strong th:text="${exam.title}">Sample Title</strong>
+            </div>
+        </div>
+        <a th:href="@{/admin/exam/{id}/question/add(id=${exam.id})}" class="btn-new">
+            <i class="bi bi-plus-circle"></i> New Question
+        </a>
+    </div>
+
+    <!-- Table panel -->
+    <div class="glass-panel tilt-card">
+        <div class="table-responsive">
+            <table class="q-table">
+                <thead>
+                    <tr>
+                        <th style="width:45%;">Question Detail</th>
+                        <th>Points</th>
+                        <th>Key (Option)</th>
+                        <th class="text-center">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="q : ${questions}">
+                        <td>
+                            <div class="question-text" th:title="${q.text}" th:text="${q.text}">
+                                Sample question text...
+                            </div>
+                        </td>
+                        <td>
+                            <span class="marks-badge">
+                                <i class="bi bi-star-fill" style="font-size:.7rem;"></i>
+                                <span th:text="${q.marks}">5</span>
+                            </span>
+                        </td>
+                        <td>
+                            <span class="ans-badge">
+                                Opt: <span th:text="${q.correctAnswer}">1</span>
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            <a th:href="@{/admin/question/edit/{id}(id=${q.id})}"
+                               class="btn-act btn-edit me-2" title="Edit">
+                                <i class="bi bi-pencil-square"></i>
+                            </a>
+                            <a th:href="@{/admin/exam/{examId}/question/delete/{qId}(examId=${exam.id},qId=${q.id})}"
+                               class="btn-act btn-del" title="Delete"
+                               onclick="return confirm('Remove this question? This cannot be undone.');">
+                                <i class="bi bi-trash3-fill"></i>
+                            </a>
+                        </td>
+                    </tr>
+
+                    <tr th:if="${#lists.isEmpty(questions)}">
+                        <td colspan="4" style="text-align:center; padding:50px 0; color:var(--text-muted);">
+                            <i class="bi bi-patch-question" style="font-size:2.5rem; display:block; margin-bottom:12px; opacity:.4;"></i>
+                            No questions yet. Click "New Question" to start.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <a th:href="@{/admin/manage-exams}" class="btn-return">
+            <i class="bi bi-arrow-left"></i> Return to Exams
+        </a>
+    </div>
+</main>
+
+<!-- Three.js -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script th:inline="none">
+(function () {
+    const canvas = document.getElementById('bgCanvas');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+
+    function isLightTheme() { return document.documentElement.getAttribute('data-bs-theme') === 'light'; }
+    const DARK_BG = 0x090b14, LIGHT_BG = 0xf4f5fb;
+
+    const scene = new THREE.Scene();
+    renderer.setClearColor(isLightTheme() ? LIGHT_BG : DARK_BG, 1);
+    scene.fog = new THREE.FogExp2(isLightTheme() ? LIGHT_BG : DARK_BG, 0.038);
+
+    const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 200);
+    camera.position.set(0, 2, 24);
+    function resize() { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
+    resize(); window.addEventListener('resize', resize);
+
+    scene.add(new THREE.AmbientLight(0x140d40, 1.5));
+    const pl1 = new THREE.PointLight(0x8b5cf6, 2.5, 45); pl1.position.set(-8,8,10); scene.add(pl1);
+    const pl2 = new THREE.PointLight(0x22d3ee, 2, 35);   pl2.position.set(10,-5,8); scene.add(pl2);
+
+    function mat(c,op=1){return new THREE.MeshStandardMaterial({color:c,metalness:.85,roughness:.15,transparent:op<1,opacity:op,emissive:c,emissiveIntensity:.1});}
+
+    const rings=[];
+    [[8,.03,0.25,0.0,0x22d3ee],[6.5,.038,0.7,0.9,0x8b5cf6],[5,.045,1.2,1.8,0x38bdf8],[3.5,.052,0.5,2.6,0xa78bfa]].forEach(([r,t,rx,ry,col])=>{
+        const m=new THREE.Mesh(new THREE.TorusGeometry(r,t,8,140),mat(col,.6)); m.rotation.x=rx; m.rotation.y=ry; scene.add(m); rings.push(m);
+    });
+
+    // Question-knot signature (matches add/edit question pages)
+    const qGeo = new THREE.TorusKnotGeometry(0.95, 0.19, 100, 12, 2, 3);
+    const qMesh = new THREE.Mesh(qGeo, new THREE.MeshStandardMaterial({ color: 0x8b5cf6, metalness: .9, roughness: .1, emissive: 0x22d3ee, emissiveIntensity: .3, transparent: true, opacity: .85 }));
+    scene.add(qMesh);
+
+    const floaters=[];
+    [[new THREE.OctahedronGeometry(.28,0),0x22d3ee],[new THREE.TetrahedronGeometry(.22,0),0x8b5cf6],[new THREE.IcosahedronGeometry(.18,0),0x38bdf8],[new THREE.OctahedronGeometry(.20,0),0xa78bfa],[new THREE.TetrahedronGeometry(.30,0),0x22d3ee],[new THREE.OctahedronGeometry(.15,0),0x8b5cf6],[new THREE.IcosahedronGeometry(.25,0),0x22d3ee],[new THREE.TetrahedronGeometry(.18,0),0x38bdf8],[new THREE.OctahedronGeometry(.22,0),0xa78bfa],[new THREE.TetrahedronGeometry(.26,0),0x8b5cf6]].forEach(([geo,col])=>{
+        const m=new THREE.Mesh(geo,mat(col,.65)); const a=Math.random()*Math.PI*2,rad=6+Math.random()*6;
+        m.position.set(Math.cos(a)*rad,(Math.random()-.5)*10,Math.sin(a)*rad-5); m.userData={spd:.25+Math.random()*.35,offset:Math.random()*Math.PI*2,rad,a}; scene.add(m); floaters.push(m);
+    });
+
+    const ptPos=new Float32Array(2000*3); for(let i=0;i<ptPos.length;i++) ptPos[i]=(Math.random()-.5)*70;
+    const ptGeo=new THREE.BufferGeometry(); ptGeo.setAttribute('position',new THREE.BufferAttribute(ptPos,3));
+    scene.add(new THREE.Points(ptGeo,new THREE.PointsMaterial({color:0x22d3ee,size:.055,transparent:true,opacity:.4})));
+
+    const grid=new THREE.GridHelper(80,35,0x1a1040,0x1a1040); grid.position.y=-12; grid.material.transparent=true; grid.material.opacity=.28; scene.add(grid);
+
+    let mx=0,my=0,cx=0,cy=0,t=0;
+    window.addEventListener('mousemove',e=>{mx=(e.clientX/innerWidth)*2-1; my=-((e.clientY/innerHeight)*2-1);});
+
+    const themeObserver = new MutationObserver(() => {
+        const light = isLightTheme();
+        renderer.setClearColor(light ? LIGHT_BG : DARK_BG, 1);
+        scene.fog.color.set(light ? LIGHT_BG : DARK_BG);
+    });
+    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-bs-theme'] });
+
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    (function animate(){
+        requestAnimationFrame(animate);
+        if (reduceMotion) { renderer.render(scene, camera); return; }
+        t+=.007;
+        cx+=(mx*.2-cx)*.05; cy+=(my*.15-cy)*.05; camera.position.x=cx*3.5; camera.position.y=2+cy*2; camera.lookAt(0,0,0);
+        rings[0].rotation.x+=.0025; rings[0].rotation.y+=.003;
+        rings[1].rotation.x-=.003;  rings[1].rotation.z+=.002;
+        rings[2].rotation.y+=.005;  rings[2].rotation.z-=.0025;
+        rings[3].rotation.x+=.004;  rings[3].rotation.y-=.003;
+        qMesh.rotation.x += .005; qMesh.rotation.y += .007;
+        qMesh.scale.setScalar(Math.sin(t*1.8)*.06 + 1);
+        pl1.position.x=Math.sin(t*.65)*9; pl1.position.y=Math.cos(t*.45)*6;
+        pl2.position.x=Math.cos(t*.55)*8; pl2.position.y=Math.sin(t*.75)*5;
+        floaters.forEach(f=>{const d=f.userData,na=d.a+t*d.spd*.1; f.position.x=Math.cos(na)*d.rad; f.position.z=Math.sin(na)*d.rad-5; f.position.y=Math.sin(t*d.spd+d.offset)*2; f.rotation.x+=.013; f.rotation.y+=.011;});
+        renderer.render(scene,camera);
+    })();
+})();
+</script>
+
+<!-- 3D tilt-on-hover -->
+<script th:inline="none">
+(function () {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    document.querySelectorAll('.tilt-card').forEach(card => {
+        card.addEventListener('mousemove', e => {
+            const r = card.getBoundingClientRect();
+            const x = (e.clientX - r.left) / r.width - 0.5;
+            const y = (e.clientY - r.top) / r.height - 0.5;
+            card.style.transform = `perspective(1000px) rotateX(${(-y * 3).toFixed(2)}deg) rotateY(${(x * 3).toFixed(2)}deg)`;
+        });
+        card.addEventListener('mouseleave', () => { card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0)'; });
+    });
+})();
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

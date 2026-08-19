@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Exam History - NexExam</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Flash prevention -->
+    <script th:inline="none">
+        (function () {
+            var t = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-bs-theme', t);
+        })();
+    </script>
+
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg-void:      #090b14;
+            --bg-surface:   #12162a;
+            --glass:        rgba(18, 22, 42, 0.7);
+            --border-glass: rgba(255, 255, 255, 0.08);
+            --text-primary: #eef0f9;
+            --text-muted:   #9099b8;
+            --accent-violet:#8b5cf6;
+            --accent-cyan:  #22d3ee;
+            --accent-gradient: linear-gradient(135deg, #8b5cf6 0%, #22d3ee 100%);
+            --pass: #34d399;
+            --fail: #f87171;
+        }
+
+        [data-bs-theme="light"] {
+            --bg-void:      #f4f5fb;
+            --bg-surface:   #ffffff;
+            --glass:        rgba(255, 255, 255, 0.82);
+            --border-glass: rgba(15, 23, 42, 0.08);
+            --text-primary: #1b2140;
+            --text-muted:   #5b6489;
+            --accent-violet:#7c3aed;
+            --accent-cyan:  #0891b2;
+        }
+
+        body {
+            background-color: var(--bg-void) !important;
+            font-family: 'DM Sans', sans-serif;
+            color: var(--text-primary) !important;
+            min-height: 100vh;
+            transition: background-color .4s ease, color .4s ease;
+        }
+
+        #bgCanvas {
+            position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 0; pointer-events: none;
+        }
+        [data-bs-theme="light"] #bgCanvas { opacity: .22; }
+
+        .main-container { position: relative; z-index: 10; padding-top: 100px; padding-bottom: 50px; }
+
+        .result-card {
+            background: var(--glass) !important;
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border: 1px solid var(--border-glass) !important;
+            border-radius: 22px;
+            transition: transform .3s ease, border-color .3s ease, box-shadow .3s ease;
+            color: var(--text-primary) !important;
+            position: relative;
+            overflow: hidden;
+            animation: fadeUp .6s ease-out both;
+        }
+
+        .result-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 8%; right: 8%; height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(139,92,246,.4), transparent);
+        }
+
+        .result-card:hover {
+            transform: translateY(-8px);
+            border-color: rgba(139,92,246,.4) !important;
+            box-shadow: 0 25px 50px rgba(0,0,0,.4), 0 0 40px rgba(139,92,246,.15);
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(18px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .score-display {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 18px;
+            padding: 20px;
+            margin: 1.5rem 0;
+            border: 1px solid var(--border-glass);
+        }
+
+        .score-percent { font-family: 'Sora', sans-serif; font-size: 2.2rem; font-weight: 800; line-height: 1; margin-bottom: 5px; }
+
+        .badge-pass {
+            background: rgba(52,211,153,.12); color: var(--pass);
+            border: 1px solid rgba(52,211,153,.3);
+            font-weight: 700; padding: 5px 12px; border-radius: 50px; font-size: .72rem;
+        }
+        .badge-fail {
+            background: rgba(248,113,113,.12); color: var(--fail);
+            border: 1px solid rgba(248,113,113,.3);
+            font-weight: 700; padding: 5px 12px; border-radius: 50px; font-size: .72rem;
+        }
+
+        /* Primary action — most useful for every result, pass or fail */
+        .btn-review-answers {
+            background: var(--accent-gradient);
+            color: #090b14 !important;
+            font-family: 'Sora', sans-serif;
+            font-weight: 700;
+            border-radius: 12px;
+            padding: 12px;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            text-decoration: none;
+            transition: .25s;
+            box-shadow: 0 0 16px rgba(139,92,246,.3);
+        }
+        .btn-review-answers:hover {
+            box-shadow: 0 0 26px rgba(139,92,246,.5);
+            transform: translateY(-2px);
+            color: #090b14 !important;
+        }
+
+        /* Secondary — kept simple, less visual weight */
+        .btn-dashboard-link {
+            background: transparent;
+            color: var(--text-muted) !important;
+            font-weight: 600;
+            font-size: .85rem;
+            border-radius: 10px;
+            padding: 9px;
+            border: 1px solid var(--border-glass);
+            transition: .25s;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .btn-dashboard-link:hover {
+            background: rgba(139,92,246,.08);
+            color: var(--text-primary) !important;
+            border-color: rgba(139,92,246,.3);
+        }
+
+        .btn-cert {
+            background: rgba(52,211,153,.1);
+            color: var(--pass) !important;
+            font-family: 'Sora', sans-serif;
+            font-weight: 700; border-radius: 12px; padding: 12px;
+            border: 1px solid rgba(52,211,153,.35);
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            margin-top: 10px; margin-bottom: 10px;
+            text-decoration: none; transition: 0.25s;
+        }
+        .btn-cert:hover { background: var(--pass); color: #090b14 !important; border-color: transparent; transform: translateY(-2px); }
+
+        .page-header-icon {
+            width: 64px; height: 64px;
+            border-radius: 16px;
+            background: rgba(139,92,246,.12);
+            display: flex; align-items: center; justify-content: center;
+            color: var(--accent-cyan);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .result-card { animation: none !important; opacity: 1 !important; transform: none !important; }
+            .result-card:hover { transform: none !important; }
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="bgCanvas"></canvas>
+
+<div th:replace="~{navbar :: navbar}"></div>
+
+<div class="container main-container">
+    <div class="d-flex align-items-center mb-5">
+        <div class="page-header-icon me-3">
+            <i class="bi bi-clock-history fs-1"></i>
+        </div>
+        <div>
+            <h2 class="fw-bold mb-0" style="font-family:'Sora',sans-serif;">My Exam <span style="background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">History</span></h2>
+            <p style="color: var(--text-muted);" class="mb-0">Review your performance and certificates.</p>
+        </div>
+    </div>
+
+    <div th:if="${#lists.isEmpty(pastResults)}" class="text-center py-5">
+        <div class="mb-4"><i class="bi bi-journal-x fs-1" style="color: var(--text-muted);"></i></div>
+        <h4 style="color: var(--text-muted);">No exam records found.</h4>
+        <a th:href="@{/student/dashboard}" class="btn rounded-pill px-4 mt-3" style="border: 1px solid var(--accent-cyan); color: var(--accent-cyan);">Take your first exam</a>
+    </div>
+
+    <div class="row g-4" th:if="${not #lists.isEmpty(pastResults)}">
+        <div class="col-md-6 col-lg-4" th:each="result, iter : ${pastResults}">
+            <div class="card result-card h-100" th:style="'animation-delay:' + ${iter.index * 0.06} + 's'">
+                <div class="card-body d-flex flex-column p-4">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <h5 class="fw-bold mb-1" th:text="${result.exam.title}" style="color: var(--text-primary);">Exam Name</h5>
+                            <small style="color: var(--text-muted);">
+                                <i class="bi bi-calendar-event me-1"></i>
+                                <span th:text="${#temporals.format(result.submissionTime, 'dd MMM yyyy')}">Date</span>
+                            </small>
+                        </div>
+                        <th:block th:with="pct=${result.totalMarks > 0 ? (result.scoreAchieved * 100.0) / result.totalMarks : 0}">
+                            <span th:class="${pct >= 30 ? 'badge-pass' : 'badge-fail'}" th:text="${pct >= 30 ? 'PASSED' : 'FAILED'}"></span>
+                        </th:block>
+                    </div>
+                    <div class="text-center score-display">
+                        <th:block th:with="percentage=${result.totalMarks > 0 ? (result.scoreAchieved * 100.0) / result.totalMarks : 0}">
+                            <div class="score-percent" th:style="${percentage >= 30 ? 'color: var(--pass)' : 'color: var(--fail)'}" th:text="${#numbers.formatDecimal(percentage, 1, 1) + '%'}"></div>
+                            <div style="color: var(--text-muted);" class="small" th:text="|${result.scoreAchieved} / ${result.totalMarks} Marks|"></div>
+                        </th:block>
+                    </div>
+
+                    <a th:href="@{/student/review/{id}(id=${result.id})}" class="btn-review-answers">
+                        <i class="bi bi-search"></i> Review Answers
+                    </a>
+
+                    <a th:if="${result.totalMarks > 0 and (result.scoreAchieved * 100.0 / result.totalMarks) >= 30}" th:href="@{/student/certificate/{id}(id=${result.id})}" class="btn-cert">
+                        <i class="bi bi-patch-check"></i> View Certificate
+                    </a>
+
+                    <a th:href="@{/student/dashboard}" class="btn-dashboard-link mt-auto">
+                        <i class="bi bi-arrow-repeat"></i> Go to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Three.js -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script th:inline="none">
+(function () {
+    if (typeof THREE === 'undefined') { console.error('[NexExam 3D] Three.js failed to load.'); return; }
+    try {
+    const canvas = document.getElementById('bgCanvas');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+
+    function isLightTheme() { return document.documentElement.getAttribute('data-bs-theme') === 'light'; }
+    const DARK_BG = 0x090b14, LIGHT_BG = 0xf4f5fb;
+
+    const scene = new THREE.Scene();
+    renderer.setClearColor(isLightTheme() ? LIGHT_BG : DARK_BG, 1);
+    scene.fog = new THREE.FogExp2(isLightTheme() ? LIGHT_BG : DARK_BG, 0.038);
+
+    const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 200);
+    camera.position.set(0, 2, 24);
+    function resize() { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
+    resize(); window.addEventListener('resize', resize);
+
+    scene.add(new THREE.AmbientLight(0x140d40, 1.5));
+    const pl1 = new THREE.PointLight(0x8b5cf6, 2.5, 45); pl1.position.set(-8,8,10); scene.add(pl1);
+    const pl2 = new THREE.PointLight(0x22d3ee, 2, 35); pl2.position.set(10,-5,8); scene.add(pl2);
+
+    function mat(c, op=1) { return new THREE.MeshStandardMaterial({ color:c, metalness:.85, roughness:.15, transparent:op<1, opacity:op, emissive:c, emissiveIntensity:.1 }); }
+
+    const rings = [];
+    var ringData = [[8,.03,0.25,0.0,0x22d3ee],[6.5,.038,0.7,0.9,0x8b5cf6],[5,.045,1.2,1.8,0x38bdf8],[3.5,.052,0.5,2.6,0xa78bfa]];
+    ringData.forEach(function (d) {
+        var r=d[0],t=d[1],rx=d[2],ry=d[3],col=d[4];
+        var m = new THREE.Mesh(new THREE.TorusGeometry(r,t,8,140), mat(col,.6)); m.rotation.x=rx; m.rotation.y=ry; scene.add(m); rings.push(m);
+    });
+
+    // Stacked "history timeline" signature — layered clock-like rings
+    const clockGroup = new THREE.Group();
+    var clockGeo = new THREE.TorusGeometry(1.1, 0.08, 10, 60);
+    var clockMesh = new THREE.Mesh(clockGeo, new THREE.MeshStandardMaterial({ color: 0x8b5cf6, metalness: .9, roughness: .1, emissive: 0x22d3ee, emissiveIntensity: .3, transparent: true, opacity: .85 }));
+    var handGeo = new THREE.BoxGeometry(0.06, 0.7, 0.06);
+    var handMesh = new THREE.Mesh(handGeo, new THREE.MeshStandardMaterial({ color: 0x22d3ee, metalness: .9, roughness: .1, emissive: 0x22d3ee, emissiveIntensity: .4 }));
+    handMesh.position.y = 0.35;
+    clockGroup.add(clockMesh, handMesh);
+    scene.add(clockGroup);
+
+    const floaters = [];
+    var floaterData = [[new THREE.OctahedronGeometry(.28,0),0x22d3ee],[new THREE.TetrahedronGeometry(.22,0),0x8b5cf6],[new THREE.IcosahedronGeometry(.18,0),0x38bdf8],[new THREE.OctahedronGeometry(.20,0),0xa78bfa],[new THREE.TetrahedronGeometry(.30,0),0x22d3ee],[new THREE.OctahedronGeometry(.15,0),0x8b5cf6],[new THREE.IcosahedronGeometry(.25,0),0x22d3ee],[new THREE.TetrahedronGeometry(.18,0),0x38bdf8]];
+    floaterData.forEach(function (d) {
+        var geo=d[0], col=d[1];
+        var m = new THREE.Mesh(geo, mat(col,.65)); var a=Math.random()*Math.PI*2, rad=6+Math.random()*6;
+        m.position.set(Math.cos(a)*rad,(Math.random()-.5)*10,Math.sin(a)*rad-5); m.userData={spd:.25+Math.random()*.35,offset:Math.random()*Math.PI*2,rad,a}; scene.add(m); floaters.push(m);
+    });
+
+    const ptPos = new Float32Array(2000*3); for(let i=0;i<ptPos.length;i++) ptPos[i]=(Math.random()-.5)*70;
+    const ptGeo = new THREE.BufferGeometry(); ptGeo.setAttribute('position',new THREE.BufferAttribute(ptPos,3));
+    scene.add(new THREE.Points(ptGeo,new THREE.PointsMaterial({color:0x22d3ee,size:.055,transparent:true,opacity:.4})));
+
+    const grid = new THREE.GridHelper(80,35,0x1a1040,0x1a1040); grid.position.y=-12; grid.material.transparent=true; grid.material.opacity=.28; scene.add(grid);
+
+    let mx=0,my=0,cx=0,cy=0,t=0;
+    window.addEventListener('mousemove', function (e) { mx=(e.clientX/innerWidth)*2-1; my=-((e.clientY/innerHeight)*2-1); });
+
+    const themeObserver = new MutationObserver(function () {
+        var light = isLightTheme();
+        renderer.setClearColor(light ? LIGHT_BG : DARK_BG, 1);
+        scene.fog.color.set(light ? LIGHT_BG : DARK_BG);
+    });
+    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-bs-theme'] });
+
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    (function animate(){
+        requestAnimationFrame(animate);
+        if (reduceMotion) { renderer.render(scene, camera); return; }
+        t+=.007;
+        cx+=(mx*.2-cx)*.05; cy+=(my*.15-cy)*.05; camera.position.x=cx*3.5; camera.position.y=2+cy*2; camera.lookAt(0,0,0);
+        rings[0].rotation.x+=.0025; rings[0].rotation.y+=.003;
+        rings[1].rotation.x-=.003; rings[1].rotation.z+=.002;
+        rings[2].rotation.y+=.005; rings[2].rotation.z-=.0025;
+        rings[3].rotation.x+=.004; rings[3].rotation.y-=.003;
+        clockGroup.rotation.z -= .012;
+        clockGroup.position.y = Math.sin(t * 1.4) * .2;
+        pl1.position.x=Math.sin(t*.65)*9; pl1.position.y=Math.cos(t*.45)*6;
+        pl2.position.x=Math.cos(t*.55)*8; pl2.position.y=Math.sin(t*.75)*5;
+        floaters.forEach(function(f){var d=f.userData,na=d.a+t*d.spd*.1; f.position.x=Math.cos(na)*d.rad; f.position.z=Math.sin(na)*d.rad-5; f.position.y=Math.sin(t*d.spd+d.offset)*2; f.rotation.x+=.013; f.rotation.y+=.011;});
+        renderer.render(scene,camera);
+    })();
+    } catch (err) {
+        console.error('[NexExam 3D] My Results background failed:', err);
+    }
+})();
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

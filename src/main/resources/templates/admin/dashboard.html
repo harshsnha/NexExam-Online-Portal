@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexExam - Admin Panel</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg-void:      #090b14;
+            --bg-surface:   #12162a;
+            --glass:        rgba(18, 22, 42, 0.68);
+            --border-glass: rgba(255, 255, 255, 0.08);
+            --text-primary: #eef0f9;
+            --text-muted:   #9099b8;
+            --accent-violet:#8b5cf6;
+            --accent-cyan:  #22d3ee;
+            --accent-gradient: linear-gradient(135deg, #8b5cf6 0%, #22d3ee 100%);
+            --pass: #34d399;
+            --fail: #f87171;
+            --gold: #fbbf24;
+        }
+
+        [data-bs-theme="light"] {
+            --bg-void:      #f4f5fb;
+            --bg-surface:   #ffffff;
+            --glass:        rgba(255, 255, 255, 0.78);
+            --border-glass: rgba(15, 23, 42, 0.08);
+            --text-primary: #1b2140;
+            --text-muted:   #5b6489;
+            --accent-violet:#7c3aed;
+            --accent-cyan:  #0891b2;
+        }
+
+        html, body {
+            background: var(--bg-void) !important;
+            font-family: 'DM Sans', sans-serif;
+            color: var(--text-primary);
+            min-height: 100vh;
+            transition: background 0.4s ease, color 0.4s ease;
+        }
+
+        /* ── 3D canvas fixed behind everything ── */
+        #bgCanvas {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* ── All content above canvas ── */
+        .page-wrap {
+            position: relative;
+            z-index: 10;
+            padding-top: 90px;
+            padding-bottom: 60px;
+        }
+
+        /* ── Page header ── */
+        .page-header {
+            margin-bottom: 36px;
+            animation: fadeUp .85s .1s ease-out both;
+        }
+
+        .page-header h2 {
+            font-family: 'Sora', sans-serif;
+            font-weight: 800;
+            font-size: 2rem;
+            letter-spacing: -.5px;
+            margin-bottom: 4px;
+        }
+
+        .page-header h2 span {
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .page-header p { color: var(--text-muted); font-size: .88rem; }
+
+        /* ── KPI cards ── */
+        .kpi-card {
+            background: var(--glass);
+            border: 1px solid var(--border-glass);
+            border-radius: 20px;
+            padding: 24px 22px;
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            position: relative;
+            overflow: hidden;
+            transform-style: preserve-3d;
+            perspective: 700px;
+            transition: border-color .3s, box-shadow .35s;
+            animation: fadeUp .85s ease-out both;
+            will-change: transform;
+        }
+
+        .kpi-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--border-glow, rgba(139,92,246,.5)), transparent);
+        }
+
+        /* Cursor-tracked specular light on the glass surface */
+        .kpi-card::after {
+            content: '';
+            position: absolute; inset: 0;
+            background: radial-gradient(240px circle at var(--mx,50%) var(--my,30%), rgba(255,255,255,.16), transparent 60%);
+            opacity: 0;
+            transition: opacity .3s ease;
+            pointer-events: none;
+        }
+
+        .kpi-card:hover::after { opacity: 1; }
+
+        /* Layered "stepped edge" shadow — simulates real card thickness in 3D space */
+        .kpi-card:hover {
+            border-color: rgba(139,92,246,.55);
+            box-shadow:
+                0 1px 0 rgba(139,92,246,.45),
+                0 2px 0 rgba(139,92,246,.38),
+                0 3px 0 rgba(139,92,246,.3),
+                0 4px 0 rgba(139,92,246,.22),
+                0 5px 0 rgba(139,92,246,.14),
+                0 34px 60px rgba(0,0,0,.5),
+                0 0 60px rgba(139,92,246,.3);
+        }
+
+        .kpi-icon {
+            width: 48px; height: 48px;
+            border-radius: 13px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.3rem;
+            margin-bottom: 16px;
+            transform: translateZ(20px);
+            transition: transform .3s ease;
+        }
+
+        .kpi-card:hover .kpi-icon { transform: translateZ(70px) scale(1.12); }
+
+        .kpi-value {
+            font-family: 'Sora', sans-serif;
+            font-weight: 800;
+            font-size: 2rem;
+            line-height: 1;
+            margin-bottom: 4px;
+            transform: translateZ(15px);
+            transition: transform .3s ease;
+        }
+
+        .kpi-card:hover .kpi-value { transform: translateZ(48px); }
+
+        .kpi-label {
+            font-size: .68rem;
+            font-weight: 600;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            transition: transform .3s ease;
+        }
+
+        .kpi-card:hover .kpi-label { transform: translateZ(28px); }
+
+        /* ── Glass panels ── */
+        .glass-panel {
+            background: var(--glass);
+            border: 1px solid var(--border-glass);
+            border-radius: 22px;
+            padding: 26px 24px;
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            margin-bottom: 24px;
+            position: relative;
+            overflow: hidden;
+            transform-style: preserve-3d;
+            perspective: 1000px;
+            transition: border-color .3s, box-shadow .35s;
+            animation: fadeUp .85s ease-out both;
+            will-change: transform;
+        }
+
+        .glass-panel::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 8%; right: 8%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(139,92,246,.35), transparent);
+        }
+
+        .glass-panel::after {
+            content: '';
+            position: absolute; inset: 0;
+            background: radial-gradient(340px circle at var(--mx,50%) var(--my,20%), rgba(255,255,255,.1), transparent 60%);
+            opacity: 0;
+            transition: opacity .35s ease;
+            pointer-events: none;
+        }
+
+        .glass-panel:hover::after { opacity: 1; }
+
+        .glass-panel:hover {
+            border-color: rgba(139,92,246,.4);
+            box-shadow:
+                0 1px 0 rgba(139,92,246,.35),
+                0 2px 0 rgba(139,92,246,.28),
+                0 3px 0 rgba(139,92,246,.2),
+                0 4px 0 rgba(139,92,246,.12),
+                0 36px 70px rgba(0,0,0,.45),
+                0 0 60px rgba(139,92,246,.22);
+        }
+
+        .panel-title { transition: transform .3s ease; }
+        .glass-panel:hover .panel-title { transform: translateZ(24px); }
+
+        .panel-title {
+            font-family: 'Sora', sans-serif;
+            font-weight: 700;
+            font-size: 1rem;
+            letter-spacing: -.2px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* ── Table ── */
+        .custom-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .custom-table thead th {
+            font-size: .68rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: var(--accent-cyan);
+            border-bottom: 1px solid var(--border-glass);
+            padding: 0 0 14px;
+        }
+
+        .custom-table tbody td {
+            padding: 14px 0;
+            border-bottom: 1px solid rgba(255,255,255,.04);
+            font-size: .88rem;
+            color: var(--text-primary);
+            vertical-align: middle;
+        }
+
+        .custom-table tbody tr:last-child td { border-bottom: none; }
+
+        .custom-table tbody tr { transition: background .2s; }
+
+        .custom-table tbody tr:hover td {
+            background: rgba(139,92,246,.05);
+        }
+
+        /* ── Badges ── */
+        .badge-pass, .badge-fail {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 50px;
+            font-size: .68rem;
+            font-weight: 700;
+            letter-spacing: .5px;
+        }
+
+        .badge-pass {
+            background: rgba(52,211,153,.1);
+            color: var(--pass);
+            border: 1px solid rgba(52,211,153,.25);
+        }
+
+        .badge-fail {
+            background: rgba(248,113,113,.1);
+            color: var(--fail);
+            border: 1px solid rgba(248,113,113,.25);
+        }
+
+        /* ── Performer cards ── */
+        .performer-card {
+            background: rgba(139,92,246,.025);
+            border: 1px solid var(--border-glass);
+            border-radius: 14px;
+            padding: 14px 16px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            transition: background .25s, transform .25s, border-color .25s;
+            margin-bottom: 12px;
+        }
+
+        .performer-card:hover {
+            background: rgba(139,92,246,.08);
+            transform: translateX(4px);
+            border-color: rgba(139,92,246,.25);
+        }
+
+        .performer-rank { font-size: 1.4rem; flex-shrink: 0; }
+        .performer-name { font-weight: 600; font-size: .88rem; }
+        .performer-exam { font-size: .72rem; color: var(--text-muted); margin-top: 2px; }
+        .performer-score {
+            margin-left: auto;
+            text-align: right;
+            font-family: 'Sora', sans-serif;
+            font-weight: 700;
+            font-size: .9rem;
+            color: var(--accent-cyan);
+        }
+
+        /* ── Avatar initials ── */
+        .avatar {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            background: var(--accent-gradient);
+            display: flex; align-items: center; justify-content: center;
+            font-size: .7rem;
+            font-weight: 700;
+            color: #090b14;
+            flex-shrink: 0;
+        }
+
+        /* ── Leaderboard btn ── */
+        .btn-ghost {
+            background: rgba(139,92,246,.1);
+            color: var(--accent-cyan);
+            border: 1px solid rgba(139,92,246,.3);
+            border-radius: 50px;
+            padding: 7px 22px;
+            font-size: .8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background .2s, box-shadow .2s, transform .2s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-ghost:hover {
+            background: rgba(139,92,246,.18);
+            box-shadow: 0 0 18px rgba(139,92,246,.25);
+            color: var(--accent-cyan);
+            transform: translateY(-2px);
+        }
+
+        /* ── Chart containers ── */
+        .chart-wrap { position: relative; }
+
+        /* ── Stat row in pie card ── */
+        .stat-row {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border-glass);
+        }
+
+        .stat-item { text-align: center; }
+        .stat-item .val { font-family: 'Sora', sans-serif; font-weight: 800; font-size: 1.4rem; }
+        .stat-item .lbl { font-size: .68rem; letter-spacing: .8px; text-transform: uppercase; color: var(--text-muted); }
+
+        /* ── Animations ── */
+        @keyframes fadeUp {
+            0%   { opacity: 0; transform: translateY(40px) scale(1.18); }
+            60%  { opacity: 1; transform: translateY(-6px) scale(1.03); }
+            80%  { transform: translateY(2px) scale(.99); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .kpi-card:nth-child(1) { animation-delay: .1s; }
+        .kpi-card:nth-child(2) { animation-delay: .15s; }
+        .kpi-card:nth-child(3) { animation-delay: .2s; }
+        .kpi-card:nth-child(4) { animation-delay: .25s; }
+
+        @media (prefers-reduced-motion: reduce) {
+            .page-header, .kpi-card, .glass-panel { animation: none !important; opacity: 1 !important; transform: none !important; }
+            .kpi-card:hover, .glass-panel:hover { transform: none !important; }
+        }
+
+        @media (max-width: 768px) {
+            .page-wrap { padding-top: 80px; }
+            .page-header h2 { font-size: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Three.js background canvas -->
+<canvas id="bgCanvas"></canvas>
+
+<!-- Navbar fragment -->
+<div th:replace="~{navbar :: navbar}"></div>
+
+<!-- Main content -->
+<div class="container page-wrap">
+
+    <!-- Header -->
+    <div class="page-header">
+        <h2>Admin <span>Dashboard</span></h2>
+        <p>Live metrics with 30% passing threshold analytics.</p>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3 col-6">
+            <div class="kpi-card tilt-card" style="--border-glow: rgba(139,92,246,.5);">
+                <div class="kpi-icon" style="background: rgba(139,92,246,.12); color: #8b5cf6;">
+                    <i class="bi bi-people-fill"></i>
+                </div>
+                <div class="kpi-value count-up" th:text="${totalStudents}">0</div>
+                <div class="kpi-label">Students</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="kpi-card tilt-card" style="--border-glow: rgba(34,211,238,.5);">
+                <div class="kpi-icon" style="background: rgba(34,211,238,.12); color: #22d3ee;">
+                    <i class="bi bi-journal-check"></i>
+                </div>
+                <div class="kpi-value count-up" th:text="${totalExams}">0</div>
+                <div class="kpi-label">Exams</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="kpi-card tilt-card" style="--border-glow: rgba(52,211,153,.5);">
+                <div class="kpi-icon" style="background: rgba(52,211,153,.12); color: #34d399;">
+                    <i class="bi bi-patch-question-fill"></i>
+                </div>
+                <div class="kpi-value count-up" th:text="${totalQuestions}">0</div>
+                <div class="kpi-label">Questions</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="kpi-card tilt-card" style="--border-glow: rgba(245,158,11,.5);">
+                <div class="kpi-icon" style="background: rgba(245,158,11,.12); color: #f59e0b;">
+                    <i class="bi bi-send-check-fill"></i>
+                </div>
+                <div class="kpi-value count-up" th:text="${totalSubmissions}">0</div>
+                <div class="kpi-label">Submissions</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts row -->
+    <div class="row g-4 mb-4">
+
+        <!-- Pie chart -->
+        <div class="col-lg-5">
+            <div class="glass-panel tilt-card" style="animation-delay:.3s;">
+                <div class="panel-title">
+                    <i class="bi bi-pie-chart-fill" style="color: var(--accent-cyan);"></i>
+                    Overall Result
+                    <small style="color:var(--text-muted); font-size:.75rem; font-weight:400;">(30% Pass)</small>
+                </div>
+                <div class="chart-wrap" style="height: 260px;">
+                    <canvas id="resultPieChart"></canvas>
+                </div>
+                <div class="stat-row">
+                    <div class="stat-item">
+                        <div class="val" style="color: var(--pass);" th:text="${passedCount}">0</div>
+                        <div class="lbl">Passed</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="val" style="color: var(--fail);" th:text="${failedCount}">0</div>
+                        <div class="lbl">Failed</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="val" style="color: var(--accent-cyan);" th:text="${totalSubmissions}">0</div>
+                        <div class="lbl">Total</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bar chart -->
+        <div class="col-lg-7">
+            <div class="glass-panel tilt-card" style="animation-delay:.35s;">
+                <div class="panel-title">
+                    <i class="bi bi-bar-chart-fill" style="color: var(--accent-cyan);"></i>
+                    Submission Trends
+                </div>
+                <div class="chart-wrap" style="height: 310px;">
+                    <canvas id="submissionsChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table + Performers row -->
+    <div class="row g-4">
+
+        <!-- Recent Submissions -->
+        <div class="col-lg-8">
+            <div class="glass-panel tilt-card" style="animation-delay:.4s;">
+                <div class="panel-title">
+                    <i class="bi bi-clock-history" style="color: var(--accent-cyan);"></i>
+                    Recent Submissions
+                </div>
+                <div class="table-responsive">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th style="width:50px;">#</th>
+                                <th>Student</th>
+                                <th>Score</th>
+                                <th style="text-align:right;">Result</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="res, iterStat : ${recentResults}">
+                                <td style="color:var(--text-muted); font-size:.8rem;" th:text="${iterStat.count}">1</td>
+                                <td>
+                                    <div style="display:flex; align-items:center; gap:10px;">
+                                        <div class="avatar"
+                                             th:text="${#strings.substring(res.student.fullName,0,1)}">R</div>
+                                        <span style="font-weight:500;" th:text="${res.student.fullName}">Rahul</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span style="font-family:'Sora',sans-serif; font-weight:700;"
+                                          th:text="${res.scoreAchieved}">10</span>
+                                    <span style="color:var(--text-muted);" th:text="'/ ' + ${res.totalMarks}">/ 20</span>
+                                </td>
+                                <td style="text-align:right;">
+                                    <th:block th:if="${res.totalMarks > 0}">
+                                        <span th:class="${((res.scoreAchieved * 100) / res.totalMarks) >= 30 ? 'badge-pass' : 'badge-fail'}"
+                                              th:text="${((res.scoreAchieved * 100) / res.totalMarks) >= 30 ? 'PASSED' : 'FAILED'}">
+                                        </span>
+                                    </th:block>
+                                </td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(recentResults)}">
+                                <td colspan="4" style="text-align:center; padding:40px 0; color:var(--text-muted);">
+                                    No submissions yet.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Performers -->
+        <div class="col-lg-4">
+            <div class="glass-panel tilt-card" style="animation-delay:.45s;">
+                <div class="panel-title">
+                    <i class="bi bi-trophy-fill" style="color: var(--gold);"></i>
+                    Top Performers
+                </div>
+
+                <div th:each="res, iter : ${recentResults}" th:if="${iter.index < 3}">
+                    <div class="performer-card">
+                        <div class="performer-rank">
+                            <i th:if="${iter.index == 0}" class="bi bi-award-fill" style="color:#fbbf24;"></i>
+                            <i th:if="${iter.index == 1}" class="bi bi-award-fill" style="color:#94a3b8;"></i>
+                            <i th:if="${iter.index == 2}" class="bi bi-award-fill" style="color:#b45309;"></i>
+                        </div>
+                        <div>
+                            <div class="performer-name" th:text="${res.student.fullName}">Student</div>
+                            <div class="performer-exam" th:text="${res.exam.title}">Exam Title</div>
+                        </div>
+                        <div class="performer-score"
+                             th:text="${#numbers.formatDecimal((res.scoreAchieved * 100.0 / res.totalMarks), 1, 1) + '%'}">
+                            95%
+                        </div>
+                    </div>
+                </div>
+
+                <div th:if="${#lists.isEmpty(recentResults)}"
+                     style="text-align:center; padding:30px 0; color:var(--text-muted); font-size:.85rem;">
+                    No toppers yet.
+                </div>
+
+                <div style="text-align:center; margin-top:16px;">
+                    <a th:href="@{/admin/rankings}" class="btn-ghost">
+                        <i class="bi bi-bar-chart-steps me-1"></i> View Leaderboard
+                    </a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Three.js -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script th:inline="none">
+(function () {
+    const canvas = document.getElementById('bgCanvas');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+
+    function isLightTheme() {
+        return document.documentElement.getAttribute('data-bs-theme') === 'light';
+    }
+
+    const DARK_BG = 0x090b14;
+    const LIGHT_BG = 0xf4f5fb;
+
+    const scene = new THREE.Scene();
+    renderer.setClearColor(isLightTheme() ? LIGHT_BG : DARK_BG, 1);
+    scene.fog = new THREE.FogExp2(isLightTheme() ? LIGHT_BG : DARK_BG, 0.038);
+
+    const camera = new THREE.PerspectiveCamera(65, innerWidth / innerHeight, 0.1, 200);
+    camera.position.set(0, 2, 24);
+
+    function resize() {
+        renderer.setSize(innerWidth, innerHeight);
+        camera.aspect = innerWidth / innerHeight;
+        camera.updateProjectionMatrix();
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    // Lights
+    scene.add(new THREE.AmbientLight(0x140d40, 1.5));
+    const pl1 = new THREE.PointLight(0x8b5cf6, 2.5, 45);
+    pl1.position.set(-8, 8, 10);
+    scene.add(pl1);
+    const pl2 = new THREE.PointLight(0x22d3ee, 2, 35);
+    pl2.position.set(10, -5, 8);
+    scene.add(pl2);
+    const pl3 = new THREE.PointLight(0x8b5cf6, 1, 20);
+    pl3.position.set(0, -2, 14);
+    scene.add(pl3);
+
+    function mat(color, op = 1) {
+        return new THREE.MeshStandardMaterial({
+            color, metalness: .88, roughness: .12,
+            transparent: op < 1, opacity: op,
+            emissive: color, emissiveIntensity: .1
+        });
+    }
+
+    // Wide spread rings — dashboard feels more open
+    const rings = [];
+    [
+        [9.5,  .03,  0.25, 0.0,  0x22d3ee, .5],
+        [7.5,  .038, 0.7,  0.9,  0x8b5cf6, .55],
+        [5.8,  .045, 1.2,  1.8,  0x22d3ee, .5],
+        [4.2,  .052, 0.55, 2.6,  0x38bdf8, .6],
+        [2.8,  .06,  1.5,  0.4,  0xa78bfa, .55],
+    ].forEach(([r, t, rx, ry, col, op]) => {
+        const m = new THREE.Mesh(new THREE.TorusGeometry(r, t, 8, 140), mat(col, op));
+        m.rotation.x = rx; m.rotation.y = ry;
+        scene.add(m); rings.push(m);
+    });
+
+    // Central gem
+    const gemGeo = new THREE.IcosahedronGeometry(1.2, 1);
+    const gem = new THREE.Mesh(gemGeo, new THREE.MeshStandardMaterial({
+        color: 0x8b5cf6, metalness: .95, roughness: .05,
+        emissive: 0x22d3ee, emissiveIntensity: .4,
+        transparent: true, opacity: .9
+    }));
+    scene.add(gem);
+    const gemW = new THREE.Mesh(gemGeo, new THREE.MeshBasicMaterial({
+        color: 0x7dd3fc, wireframe: true, transparent: true, opacity: .15
+    }));
+    scene.add(gemW);
+
+    // Floating crystals spread wider for dashboard
+    const floaters = [];
+    [
+        [new THREE.OctahedronGeometry(.32, 0),  0x22d3ee],
+        [new THREE.TetrahedronGeometry(.26, 0),  0x8b5cf6],
+        [new THREE.IcosahedronGeometry(.2,  0),  0x38bdf8],
+        [new THREE.OctahedronGeometry(.22, 0),   0xa78bfa],
+        [new THREE.TetrahedronGeometry(.35, 0),  0x22d3ee],
+        [new THREE.OctahedronGeometry(.18, 0),   0x8b5cf6],
+        [new THREE.IcosahedronGeometry(.28, 0),  0x22d3ee],
+        [new THREE.TetrahedronGeometry(.2,  0),  0x38bdf8],
+        [new THREE.OctahedronGeometry(.15, 0),   0xa78bfa],
+        [new THREE.TetrahedronGeometry(.24, 0),  0x22d3ee],
+    ].forEach(([geo, col]) => {
+        const m = new THREE.Mesh(geo, mat(col, .65));
+        const a = Math.random() * Math.PI * 2;
+        const rad = 6 + Math.random() * 7;
+        m.position.set(Math.cos(a) * rad, (Math.random() - .5) * 10, Math.sin(a) * rad - 5);
+        m.userData = { spd: .25 + Math.random() * .35, offset: Math.random() * Math.PI * 2, rad, a };
+        scene.add(m); floaters.push(m);
+    });
+
+    // Stars
+    const ptPos = new Float32Array(2200 * 3);
+    for (let i = 0; i < ptPos.length; i++) ptPos[i] = (Math.random() - .5) * 80;
+    const ptGeo = new THREE.BufferGeometry();
+    ptGeo.setAttribute('position', new THREE.BufferAttribute(ptPos, 3));
+    const stars = new THREE.Points(ptGeo, new THREE.PointsMaterial({
+        color: 0x22d3ee, size: .055, transparent: true, opacity: .4
+    }));
+    scene.add(stars);
+
+    // Grid floor lower — content is taller
+    const grid = new THREE.GridHelper(80, 35, 0x1a1040, 0x1a1040);
+    grid.position.y = -12;
+    grid.material.transparent = true; grid.material.opacity = .3;
+    scene.add(grid);
+
+    let mx = 0, my = 0, cx = 0, cy = 0, t = 0;
+
+    window.addEventListener('mousemove', e => {
+        mx = (e.clientX / innerWidth) * 2 - 1;
+        my = -((e.clientY / innerHeight) * 2 - 1);
+    });
+
+    // React live to the navbar's theme toggle (no reload needed)
+    const themeObserver = new MutationObserver(() => {
+        const light = isLightTheme();
+        renderer.setClearColor(light ? LIGHT_BG : DARK_BG, 1);
+        scene.fog.color.set(light ? LIGHT_BG : DARK_BG);
+    });
+    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-bs-theme'] });
+
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    (function animate() {
+        requestAnimationFrame(animate);
+        if (reduceMotion) { renderer.render(scene, camera); return; }
+        t += .007;
+
+        cx += (mx * .2 - cx) * .05;
+        cy += (my * .15 - cy) * .05;
+        camera.position.x = cx * 3.5;
+        camera.position.y = 2 + cy * 2;
+        camera.lookAt(0, 0, 0);
+
+        rings[0].rotation.x += .0025; rings[0].rotation.y += .003;
+        rings[1].rotation.x -= .003;  rings[1].rotation.z += .002;
+        rings[2].rotation.y += .005;  rings[2].rotation.z -= .0025;
+        rings[3].rotation.x += .004;  rings[3].rotation.y -= .0035;
+        rings[4].rotation.x -= .006;  rings[4].rotation.z += .004;
+
+        const pulse = Math.sin(t * 1.8) * .07 + 1;
+        gem.rotation.x += .005; gem.rotation.y += .007;
+        gemW.rotation.x = gem.rotation.x; gemW.rotation.y = gem.rotation.y;
+        gem.scale.setScalar(pulse); gemW.scale.setScalar(pulse * 1.02);
+
+        pl1.position.x = Math.sin(t * .65) * 9;
+        pl1.position.y = Math.cos(t * .45) * 6;
+        pl2.position.x = Math.cos(t * .55) * 8;
+        pl2.position.y = Math.sin(t * .75) * 5;
+
+        floaters.forEach(f => {
+            const d = f.userData;
+            const na = d.a + t * d.spd * .1;
+            f.position.x = Math.cos(na) * d.rad;
+            f.position.z = Math.sin(na) * d.rad - 5;
+            f.position.y = Math.sin(t * d.spd + d.offset) * 2;
+            f.rotation.x += .013; f.rotation.y += .011;
+        });
+
+        stars.rotation.y += .00025;
+        renderer.render(scene, camera);
+    })();
+})();
+</script>
+
+<!-- Card 3D tilt-on-hover: spring-physics smoothing + cursor-tracked light -->
+<script th:inline="none">
+(function () {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    document.querySelectorAll('.tilt-card').forEach(card => {
+        let targetRX = 0, targetRY = 0, targetLift = 0;
+        let curRX = 0, curRY = 0, curLift = 0;
+        let hovering = false;
+        let raf = null;
+
+        function loop() {
+            // Spring-lerp toward target — buttery smooth instead of an instant snap
+            curRX += (targetRX - curRX) * 0.12;
+            curRY += (targetRY - curRY) * 0.12;
+            curLift += (targetLift - curLift) * 0.12;
+            card.style.transform = `perspective(700px) rotateX(${curRX.toFixed(2)}deg) rotateY(${curRY.toFixed(2)}deg) translateY(${curLift.toFixed(2)}px) translateZ(0)`;
+
+            if (hovering || Math.abs(curRX - targetRX) > 0.05 || Math.abs(curRY - targetRY) > 0.05 || Math.abs(curLift - targetLift) > 0.05) {
+                raf = requestAnimationFrame(loop);
+            } else {
+                raf = null;
+            }
+        }
+
+        function ensureLoop() {
+            if (!raf) raf = requestAnimationFrame(loop);
+        }
+
+        card.addEventListener('mousemove', e => {
+            const r = card.getBoundingClientRect();
+            const px = (e.clientX - r.left) / r.width;
+            const py = (e.clientY - r.top) / r.height;
+            const x = px - 0.5, y = py - 0.5;
+
+            targetRX = -y * 14;
+            targetRY = x * 14;
+            targetLift = -10;
+            hovering = true;
+
+            card.style.setProperty('--mx', (px * 100).toFixed(1) + '%');
+            card.style.setProperty('--my', (py * 100).toFixed(1) + '%');
+
+            ensureLoop();
+        });
+
+        card.addEventListener('mouseleave', () => {
+            hovering = false;
+            targetRX = 0; targetRY = 0; targetLift = 0;
+            ensureLoop();
+        });
+    });
+})();
+</script>
+
+
+<!-- KPI count-up -->
+<script th:inline="none">
+(function () {
+    document.querySelectorAll('.count-up').forEach(el => {
+        const target = parseInt(el.textContent.trim(), 10) || 0;
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { el.textContent = target; return; }
+        let start = null;
+        const duration = 900;
+        function step(ts) {
+            if (!start) start = ts;
+            const progress = Math.min((ts - start) / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            el.textContent = Math.round(eased * target);
+            if (progress < 1) requestAnimationFrame(step);
+        }
+        requestAnimationFrame(step);
+    });
+})();
+</script>
+
+<!-- Charts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script th:inline="javascript">
+document.addEventListener('DOMContentLoaded', () => {
+    const passCount = [[${passedCount}]];
+    const failCount = [[${failedCount}]];
+
+    // Doughnut
+    new Chart(document.getElementById('resultPieChart').getContext('2d'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Passed', 'Failed'],
+            datasets: [{
+                data: [passCount, failCount],
+                backgroundColor: ['#34d399', '#f87171'],
+                borderColor: 'transparent',
+                hoverOffset: 12
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { color: '#9099b8', font: { family: 'DM Sans', size: 12 }, padding: 16 }
+                }
+            },
+            cutout: '72%'
+        }
+    });
+
+    // Bar (gradient fill)
+    const barCtx = document.getElementById('submissionsChart').getContext('2d');
+    const barGradient = barCtx.createLinearGradient(0, 0, 0, 300);
+    barGradient.addColorStop(0, '#22d3ee');
+    barGradient.addColorStop(1, '#8b5cf6');
+
+    const chartLabels = /*[[${chartLabels}]]*/ [];
+    const chartData   = /*[[${chartData}]]*/   [];
+
+    new Chart(barCtx, {
+        type: 'bar',
+        data: {
+            labels: chartLabels,
+            datasets: [{
+                label: 'Exams Taken',
+                data: chartData,
+                backgroundColor: barGradient,
+                borderRadius: 8,
+                hoverBackgroundColor: '#a78bfa'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    grid: { color: 'rgba(255,255,255,.04)' },
+                    ticks: { color: '#9099b8', font: { family: 'DM Sans' } },
+                    border: { display: false }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#9099b8', font: { family: 'DM Sans' } },
+                    border: { display: false }
+                }
+            },
+            plugins: { legend: { display: false } }
+        }
+    });
+});
+</script>
+</body>
+</html>

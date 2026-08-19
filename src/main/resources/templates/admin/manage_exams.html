@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Exams - NexExam Admin</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+    <script th:inline="none">
+        (function () {
+            var t = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-bs-theme', t);
+        })();
+    </script>
+
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg-void:      #090b14;
+            --bg-surface:   #12162a;
+            --glass:        rgba(18, 22, 42, 0.72);
+            --border-glass: rgba(255, 255, 255, 0.08);
+            --text-primary: #eef0f9;
+            --text-muted:   #9099b8;
+            --accent-violet:#8b5cf6;
+            --accent-cyan:  #22d3ee;
+            --accent-gradient: linear-gradient(135deg, #8b5cf6 0%, #22d3ee 100%);
+            --pass: #34d399;
+            --warn: #f59e0b;
+            --fail: #f87171;
+        }
+
+        [data-bs-theme="light"] {
+            --bg-void:      #f4f5fb;
+            --bg-surface:   #ffffff;
+            --glass:        rgba(255, 255, 255, 0.8);
+            --border-glass: rgba(15, 23, 42, 0.08);
+            --text-primary: #1b2140;
+            --text-muted:   #5b6489;
+            --accent-violet:#7c3aed;
+            --accent-cyan:  #0891b2;
+        }
+
+        html, body {
+            min-height: 100vh;
+            background: var(--bg-void);
+            font-family: 'DM Sans', sans-serif;
+            color: var(--text-primary);
+            transition: background .4s, color .4s;
+        }
+
+        #bgCanvas {
+            position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 0; pointer-events: none;
+            opacity: 1; transition: opacity .5s;
+        }
+        [data-bs-theme="light"] #bgCanvas { opacity: 0.22; }
+
+        .page-wrap {
+            position: relative; z-index: 10;
+            padding-top: 96px; padding-bottom: 60px;
+        }
+
+        /* ── Header ── */
+        .page-header {
+            display: flex; align-items: flex-end;
+            justify-content: space-between; flex-wrap: wrap;
+            gap: 14px; margin-bottom: 26px;
+            animation: fadeUp .6s .1s both;
+        }
+
+        .page-title {
+            font-family: 'Sora', sans-serif;
+            font-weight: 800; font-size: 1.8rem; letter-spacing: -.5px;
+        }
+
+        .page-title span {
+            background: var(--accent-gradient);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .page-sub { color: var(--text-muted); font-size: .85rem; margin-top: 3px; }
+
+        /* ── Create button ── */
+        .btn-create {
+            background: var(--accent-gradient);
+            color: #090b14;
+            font-family: 'Sora', sans-serif;
+            font-weight: 700; font-size: .88rem;
+            border: none; border-radius: 11px;
+            padding: 10px 20px; cursor: pointer;
+            text-decoration: none;
+            display: inline-flex; align-items: center; gap: 7px;
+            transition: box-shadow .2s, transform .15s;
+            box-shadow: 0 0 18px rgba(139,92,246,.3);
+            animation: fadeUp .6s .15s both;
+        }
+
+        .btn-create:hover {
+            box-shadow: 0 0 30px rgba(139,92,246,.5);
+            transform: translateY(-2px); color: #090b14;
+        }
+
+        /* ── Glass panel ── */
+        .glass-panel {
+            background: var(--glass);
+            border: 1px solid var(--border-glass);
+            border-radius: 22px; padding: 24px;
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            position: relative; overflow: hidden;
+            animation: fadeUp .6s .2s both;
+            transition: background .4s, border-color .4s, box-shadow .3s;
+            transform-style: preserve-3d;
+            perspective: 1200px;
+            will-change: transform;
+        }
+
+        .glass-panel::before {
+            content: ''; position: absolute;
+            top: 0; left: 8%; right: 8%; height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(139,92,246,.4), transparent);
+        }
+
+        /* ── Table ── */
+        .e-table { width: 100%; border-collapse: separate; border-spacing: 0 8px; }
+
+        .e-table thead th {
+            font-size: .68rem; font-weight: 700;
+            letter-spacing: 1px; text-transform: uppercase;
+            color: var(--accent-cyan); padding: 0 14px 10px;
+            border-bottom: 1px solid rgba(139,92,246,.2);
+        }
+
+        .e-table tbody tr { transition: transform .2s, box-shadow .2s; }
+
+        .e-table tbody td {
+            padding: 16px 14px;
+            background: rgba(255,255,255,.02);
+            border-top: 1px solid var(--border-glass);
+            border-bottom: 1px solid var(--border-glass);
+            vertical-align: middle;
+            color: var(--text-primary); font-size: .88rem;
+            transition: background .2s;
+        }
+
+        [data-bs-theme="light"] .e-table tbody td {
+            background: rgba(15,23,42,.02);
+        }
+
+        .e-table tbody td:first-child {
+            border-left: 1px solid var(--border-glass);
+            border-radius: 13px 0 0 13px;
+        }
+
+        .e-table tbody td:last-child {
+            border-right: 1px solid var(--border-glass);
+            border-radius: 0 13px 13px 0;
+        }
+
+        .e-table tbody tr:hover td {
+            background: rgba(139,92,246,.06) !important;
+        }
+
+        .e-table tbody tr:hover {
+            transform: scale(1.005);
+        }
+
+        /* ── Row content ── */
+        .row-num {
+            font-family: 'Sora', sans-serif;
+            font-weight: 700; color: var(--accent-cyan);
+        }
+
+        .exam-title { font-weight: 600; font-size: .9rem; }
+        .exam-id    { font-size: .72rem; color: var(--text-muted); margin-top: 2px; }
+        .exam-dur   { font-size: .85rem; color: var(--text-muted); }
+
+        .badge-count {
+            display: inline-block;
+            background: rgba(139,92,246,.1);
+            color: var(--accent-violet);
+            padding: 5px 12px; border-radius: 8px;
+            font-weight: 700; font-size: .82rem;
+            border: 1px solid rgba(139,92,246,.22);
+        }
+
+        /* ── Action icon buttons ── */
+        .btn-act {
+            width: 36px; height: 36px;
+            display: inline-flex; align-items: center; justify-content: center;
+            border-radius: 9px; margin: 0 2px;
+            text-decoration: none;
+            border: 1px solid var(--border-glass);
+            font-size: .88rem;
+            transition: transform .2s, box-shadow .2s, background .2s;
+        }
+
+        .btn-act:hover { transform: translateY(-2px) scale(1.05); }
+
+        .btn-add  { background: rgba(52,211,153,.12);  color: var(--pass);        border-color: rgba(52,211,153,.25); }
+        .btn-res  { background: rgba(34,211,238,.12);  color: var(--accent-cyan); border-color: rgba(34,211,238,.25); }
+        .btn-mgr  { background: rgba(148,163,184,.12); color: #94a3b8;            border-color: rgba(148,163,184,.2); }
+        .btn-edt  { background: rgba(245,158,11,.12);  color: var(--warn);        border-color: rgba(245,158,11,.25); }
+        .btn-del  { background: rgba(248,113,113,.12); color: var(--fail);        border-color: rgba(248,113,113,.25); }
+
+        .btn-add:hover  { box-shadow: 0 0 12px rgba(52,211,153,.35);  color: var(--pass); }
+        .btn-res:hover  { box-shadow: 0 0 12px rgba(34,211,238,.35);  color: var(--accent-cyan); }
+        .btn-mgr:hover  { box-shadow: 0 0 12px rgba(148,163,184,.25); color: #94a3b8; }
+        .btn-edt:hover  { box-shadow: 0 0 12px rgba(245,158,11,.35);  color: var(--warn); }
+        .btn-del:hover  { box-shadow: 0 0 12px rgba(248,113,113,.35); color: var(--fail); }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .page-header, .btn-create, .glass-panel { animation: none !important; opacity: 1 !important; transform: none !important; }
+            .glass-panel:hover, .e-table tbody tr:hover { transform: none !important; }
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="bgCanvas"></canvas>
+<div th:replace="~{navbar :: navbar}"></div>
+
+<main class="container page-wrap">
+
+    <!-- Header -->
+    <div class="page-header">
+        <div>
+            <div class="page-title">Manage <span>Exams</span></div>
+            <div class="page-sub">Total active exam sessions available in the system.</div>
+        </div>
+        <a th:href="@{/admin/exam/add}" class="btn-create">
+            <i class="bi bi-plus-lg"></i> Create New Exam
+        </a>
+    </div>
+
+    <!-- Table panel -->
+    <div class="glass-panel tilt-card">
+        <div class="table-responsive">
+            <table class="e-table">
+                <thead>
+                    <tr>
+                        <th style="width:70px;">S.N.</th>
+                        <th>Exam Title</th>
+                        <th>Duration</th>
+                        <th>Questions</th>
+                        <th class="text-center">Operations</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="exam, iterStat : ${exams}">
+
+                        <td>
+                            <span class="row-num" th:text="${iterStat.count}">1</span>
+                        </td>
+
+                        <td>
+                            <div class="exam-title" th:text="${exam.title}">Sample Exam</div>
+                            <div class="exam-id">ID: <span th:text="${exam.id}"></span></div>
+                        </td>
+
+                        <td>
+                            <span class="exam-dur">
+                                <i class="bi bi-clock me-1" style="font-size:.75rem;"></i>
+                                <span th:text="${exam.durationInMinutes} + ' Mins'">60 Mins</span>
+                            </span>
+                        </td>
+
+                        <td>
+                            <span class="badge-count" th:text="${#lists.size(exam.questions)}">10</span>
+                        </td>
+
+                        <td class="text-center">
+                            <a th:href="@{/admin/exam/{examId}/question/add(examId=${exam.id})}"
+                               class="btn-act btn-add" title="Add Question">
+                                <i class="bi bi-plus-circle"></i>
+                            </a>
+                            <a th:href="@{/admin/results/{examId}(examId=${exam.id})}"
+                               class="btn-act btn-res" title="View Results">
+                                <i class="bi bi-bar-chart-line"></i>
+                            </a>
+                            <a th:href="@{/admin/exam/manage-questions/{examId}(examId=${exam.id})}"
+                               class="btn-act btn-mgr" title="Manage Questions">
+                                <i class="bi bi-layers"></i>
+                            </a>
+                            <a th:href="@{/admin/exam/edit/{examId}(examId=${exam.id})}"
+                               class="btn-act btn-edt" title="Edit Exam">
+                                <i class="bi bi-pencil-square"></i>
+                            </a>
+                            <a th:href="@{/admin/exam/delete/{examId}(examId=${exam.id})}"
+                               class="btn-act btn-del" title="Delete Exam"
+                               onclick="return confirm('Pakka delete karna hai?');">
+                                <i class="bi bi-trash3"></i>
+                            </a>
+                        </td>
+                    </tr>
+
+                    <tr th:if="${#lists.isEmpty(exams)}">
+                        <td colspan="5" style="text-align:center; padding:50px 0; color:var(--text-muted); border:none;">
+                            <i class="bi bi-inbox" style="font-size:2.5rem; display:block; margin-bottom:12px; opacity:.4;"></i>
+                            No exams found in the database.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
+
+<!-- Three.js -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script th:inline="none">
+(function () {
+    const canvas = document.getElementById('bgCanvas');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+
+    function isLightTheme() { return document.documentElement.getAttribute('data-bs-theme') === 'light'; }
+    const DARK_BG = 0x090b14, LIGHT_BG = 0xf4f5fb;
+
+    const scene = new THREE.Scene();
+    renderer.setClearColor(isLightTheme() ? LIGHT_BG : DARK_BG, 1);
+    scene.fog = new THREE.FogExp2(isLightTheme() ? LIGHT_BG : DARK_BG, 0.038);
+
+    const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 200);
+    camera.position.set(0, 2, 24);
+    function resize() { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
+    resize(); window.addEventListener('resize', resize);
+
+    scene.add(new THREE.AmbientLight(0x140d40, 1.5));
+    const pl1 = new THREE.PointLight(0x8b5cf6, 2.5, 45); pl1.position.set(-8,8,10); scene.add(pl1);
+    const pl2 = new THREE.PointLight(0x22d3ee, 2, 35);   pl2.position.set(10,-5,8); scene.add(pl2);
+
+    function mat(c,op=1){return new THREE.MeshStandardMaterial({color:c,metalness:.85,roughness:.15,transparent:op<1,opacity:op,emissive:c,emissiveIntensity:.1});}
+
+    const rings=[];
+    [[8,.03,0.25,0.0,0x22d3ee],[6.5,.038,0.7,0.9,0x8b5cf6],[5,.045,1.2,1.8,0x38bdf8],[3.5,.052,0.5,2.6,0xa78bfa]].forEach(([r,t,rx,ry,col])=>{
+        const m=new THREE.Mesh(new THREE.TorusGeometry(r,t,8,140),mat(col,.6)); m.rotation.x=rx; m.rotation.y=ry; scene.add(m); rings.push(m);
+    });
+
+    // Stacked "layers" signature — represents question sets
+    const layerGroup = new THREE.Group();
+    [0, 1, 2].forEach(i => {
+        const geo = new THREE.BoxGeometry(1.6, 0.12, 1.6);
+        const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
+            color: i === 0 ? 0x8b5cf6 : i === 1 ? 0x22d3ee : 0xa78bfa,
+            metalness: .9, roughness: .1, transparent: true, opacity: .85,
+            emissive: i === 0 ? 0x8b5cf6 : i === 1 ? 0x22d3ee : 0xa78bfa, emissiveIntensity: .3
+        }));
+        m.position.y = i * 0.35;
+        m.rotation.y = i * 0.15;
+        layerGroup.add(m);
+    });
+    scene.add(layerGroup);
+
+    const floaters=[];
+    [[new THREE.OctahedronGeometry(.28,0),0x22d3ee],[new THREE.TetrahedronGeometry(.22,0),0x8b5cf6],[new THREE.IcosahedronGeometry(.18,0),0x38bdf8],[new THREE.OctahedronGeometry(.20,0),0xa78bfa],[new THREE.TetrahedronGeometry(.30,0),0x22d3ee],[new THREE.OctahedronGeometry(.15,0),0x8b5cf6],[new THREE.IcosahedronGeometry(.25,0),0x22d3ee],[new THREE.TetrahedronGeometry(.18,0),0x38bdf8]].forEach(([geo,col])=>{
+        const m=new THREE.Mesh(geo,mat(col,.65)); const a=Math.random()*Math.PI*2,rad=6+Math.random()*6;
+        m.position.set(Math.cos(a)*rad,(Math.random()-.5)*10,Math.sin(a)*rad-5); m.userData={spd:.25+Math.random()*.35,offset:Math.random()*Math.PI*2,rad,a}; scene.add(m); floaters.push(m);
+    });
+
+    const ptPos=new Float32Array(2000*3); for(let i=0;i<ptPos.length;i++) ptPos[i]=(Math.random()-.5)*70;
+    const ptGeo=new THREE.BufferGeometry(); ptGeo.setAttribute('position',new THREE.BufferAttribute(ptPos,3));
+    scene.add(new THREE.Points(ptGeo,new THREE.PointsMaterial({color:0x22d3ee,size:.055,transparent:true,opacity:.4})));
+
+    const grid=new THREE.GridHelper(80,35,0x1a1040,0x1a1040); grid.position.y=-12; grid.material.transparent=true; grid.material.opacity=.28; scene.add(grid);
+
+    let mx=0,my=0,cx=0,cy=0,t=0;
+    window.addEventListener('mousemove',e=>{mx=(e.clientX/innerWidth)*2-1; my=-((e.clientY/innerHeight)*2-1);});
+
+    const themeObserver = new MutationObserver(() => {
+        const light = isLightTheme();
+        renderer.setClearColor(light ? LIGHT_BG : DARK_BG, 1);
+        scene.fog.color.set(light ? LIGHT_BG : DARK_BG);
+    });
+    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-bs-theme'] });
+
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    (function animate(){
+        requestAnimationFrame(animate);
+        if (reduceMotion) { renderer.render(scene, camera); return; }
+        t+=.007;
+        cx+=(mx*.2-cx)*.05; cy+=(my*.15-cy)*.05; camera.position.x=cx*3.5; camera.position.y=2+cy*2; camera.lookAt(0,0,0);
+        rings[0].rotation.x+=.0025; rings[0].rotation.y+=.003;
+        rings[1].rotation.x-=.003;  rings[1].rotation.z+=.002;
+        rings[2].rotation.y+=.005;  rings[2].rotation.z-=.0025;
+        rings[3].rotation.x+=.004;  rings[3].rotation.y-=.003;
+        layerGroup.rotation.y += .006;
+        layerGroup.position.y = Math.sin(t * 1.4) * .25;
+        pl1.position.x=Math.sin(t*.65)*9; pl1.position.y=Math.cos(t*.45)*6;
+        pl2.position.x=Math.cos(t*.55)*8; pl2.position.y=Math.sin(t*.75)*5;
+        floaters.forEach(f=>{const d=f.userData,na=d.a+t*d.spd*.1; f.position.x=Math.cos(na)*d.rad; f.position.z=Math.sin(na)*d.rad-5; f.position.y=Math.sin(t*d.spd+d.offset)*2; f.rotation.x+=.013; f.rotation.y+=.011;});
+        renderer.render(scene,camera);
+    })();
+})();
+</script>
+
+<!-- 3D tilt-on-hover -->
+<script th:inline="none">
+(function () {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    document.querySelectorAll('.tilt-card').forEach(card => {
+        card.addEventListener('mousemove', e => {
+            const r = card.getBoundingClientRect();
+            const x = (e.clientX - r.left) / r.width - 0.5;
+            const y = (e.clientY - r.top) / r.height - 0.5;
+            card.style.transform = `perspective(1000px) rotateX(${(-y * 3).toFixed(2)}deg) rotateY(${(x * 3).toFixed(2)}deg)`;
+        });
+        card.addEventListener('mouseleave', () => { card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0)'; });
+    });
+})();
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

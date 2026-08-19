@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexExam - Future of Testing</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Flash prevention -->
+    <script th:inline="none">
+        (function () {
+            var t = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-bs-theme', t);
+        })();
+    </script>
+
+    <style>
+        /* ============ THEME TOKENS ============ */
+        :root {
+            --void: #05070d;
+            --panel: #0b1220;
+            --panel-2: #0e1626;
+            --accent: #22d3ee;
+            --accent-2: #8b5cf6;
+            --accent-3: #fbbf24;
+            --ok: #34d399;
+            --text-main: #eef2fb;
+            --text-sec: #8b96ad;
+            --line: rgba(148, 163, 184, 0.14);
+            --glass-bg: rgba(255, 255, 255, 0.04);
+            --glass-border: rgba(148, 163, 184, 0.16);
+            --font-display: 'Space Grotesk', sans-serif;
+            --font-body: 'Inter', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        [data-bs-theme="light"] {
+            --void: #eef1f8;
+            --panel: #ffffff;
+            --panel-2: #f5f7fc;
+            --accent: #0891b2;
+            --accent-2: #7c3aed;
+            --accent-3: #d97706;
+            --text-main: #0b1220;
+            --text-sec: #55617a;
+            --line: rgba(15, 23, 42, 0.1);
+            --glass-bg: rgba(255, 255, 255, 0.65);
+            --glass-border: rgba(15, 23, 42, 0.08);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            background-color: var(--void) !important;
+            font-family: var(--font-body);
+            color: var(--text-main);
+            overflow-x: hidden;
+            transition: background 0.4s ease, color 0.4s ease;
+        }
+
+        a { text-decoration: none; }
+
+        ::selection { background: var(--accent); color: var(--void); }
+
+        /* ============ AMBIENT BACKGROUND ============ */
+        .bg-grid {
+            position: fixed; inset: 0; z-index: -2;
+            background-image:
+                linear-gradient(var(--line) 1px, transparent 1px),
+                linear-gradient(90deg, var(--line) 1px, transparent 1px);
+            background-size: 46px 46px;
+            -webkit-mask-image: radial-gradient(ellipse 75% 55% at 50% 0%, black 30%, transparent 100%);
+            mask-image: radial-gradient(ellipse 75% 55% at 50% 0%, black 30%, transparent 100%);
+            animation: gridDrift 40s linear infinite;
+        }
+        @keyframes gridDrift {
+            from { background-position: 0 0, 0 0; }
+            to { background-position: 46px 46px, 46px 46px; }
+        }
+
+        #particles { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
+
+        .bg-glow { position: fixed; z-index: -1; border-radius: 50%; filter: blur(70px); pointer-events: none; }
+        .bg-glow-a { width: 560px; height: 560px; top: -220px; left: -160px; background: var(--accent); opacity: .16; animation: drift1 22s ease-in-out infinite; }
+        .bg-glow-b { width: 480px; height: 480px; bottom: -180px; right: -140px; background: var(--accent-2); opacity: .14; animation: drift2 26s ease-in-out infinite; }
+        @keyframes drift1 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(60px, 40px); } }
+        @keyframes drift2 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-50px, -30px); } }
+
+        /* ============ TYPE ============ */
+        .eyebrow {
+            font-family: var(--font-mono);
+            font-size: 0.78rem;
+            letter-spacing: 0.12em;
+            color: var(--accent);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            border: 1px solid var(--glass-border);
+            border-radius: 30px;
+            background: var(--glass-bg);
+            margin-bottom: 1.75rem;
+        }
+        .eyebrow .dot {
+            width: 7px; height: 7px; border-radius: 50%;
+            background: var(--ok);
+            box-shadow: 0 0 0 0 rgba(52,211,153,.6);
+            animation: pulseDot 1.8s ease-out infinite;
+        }
+        @keyframes pulseDot {
+            0% { box-shadow: 0 0 0 0 rgba(52,211,153,.55); }
+            70% { box-shadow: 0 0 0 8px rgba(52,211,153,0); }
+            100% { box-shadow: 0 0 0 0 rgba(52,211,153,0); }
+        }
+
+        .hero-title {
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: clamp(2.6rem, 5vw, 4.2rem);
+            line-height: 1.08;
+            letter-spacing: -0.01em;
+            color: var(--text-main);
+        }
+        .hero-title .grad {
+            background: linear-gradient(100deg, var(--accent) 10%, var(--accent-2) 90%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .lead-copy { color: var(--text-sec); font-size: 1.1rem; max-width: 520px; }
+
+        /* ============ HERO SECTION ============ */
+        .hero-section { padding: 9.5rem 0 5rem; position: relative; }
+
+        .btn-modern {
+            padding: 13px 30px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-family: var(--font-body);
+            transition: all 0.3s cubic-bezier(.2,.8,.2,1);
+        }
+        .btn-primary-custom {
+            background: var(--accent) !important;
+            color: var(--void) !important;
+            border: none;
+            box-shadow: 0 0 0 0 rgba(34,211,238,.5);
+        }
+        .btn-primary-custom:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 14px 30px -8px rgba(34,211,238,.55);
+        }
+        .btn-outline-secondary {
+            border: 1px solid var(--glass-border) !important;
+            color: var(--text-main) !important;
+            background: var(--glass-bg);
+        }
+        .btn-outline-secondary:hover {
+            border-color: var(--accent) !important;
+            color: var(--accent) !important;
+            transform: translateY(-3px);
+        }
+
+        .encourage-chip {
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: var(--text-sec);
+            letter-spacing: .04em;
+            margin-top: 1.25rem;
+        }
+        .encourage-chip b { color: var(--accent); font-weight: 600; }
+
+        /* ============ 3D FLOATING STACK (SIGNATURE ELEMENT) ============ */
+        .hero-visual { perspective: 1400px; padding: 40px; }
+
+        .stack-3d {
+            transform-style: preserve-3d;
+            will-change: transform;
+            position: relative;
+            width: 340px;
+            height: 340px;
+            margin: 0 auto;
+        }
+
+        .layer {
+            position: absolute; inset: 0;
+            border-radius: 26px;
+            border: 1px solid var(--glass-border);
+            background: linear-gradient(160deg, var(--panel) 0%, var(--panel-2) 100%);
+            box-shadow: 0 30px 60px -20px rgba(0,0,0,.5);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .layer-3 { animation: floatL3 7s ease-in-out infinite; }
+        .layer-2 { animation: floatL2 6s ease-in-out infinite; }
+        .layer-1 { animation: floatL1 5.5s ease-in-out infinite; }
+
+        @keyframes floatL3 { 0%,100% { transform: translateZ(-90px) rotate(-3deg) scale(.86) translateY(0px); opacity:.6; } 50% { transform: translateZ(-90px) rotate(-3deg) scale(.86) translateY(-10px); opacity:.6; } }
+        @keyframes floatL2 { 0%,100% { transform: translateZ(-45px) rotate(5deg) scale(.93) translateY(0px); opacity:.8; } 50% { transform: translateZ(-45px) rotate(5deg) scale(.93) translateY(12px); opacity:.8; } }
+        @keyframes floatL1 { 0%,100% { transform: translateZ(20px) rotate(-6deg) translateY(0px); } 50% { transform: translateZ(20px) rotate(-6deg) translateY(-16px); } }
+
+        .layer-1 .glow-icon {
+            width: 92px; height: 92px; border-radius: 22px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            display: flex; align-items: center; justify-content: center;
+            font-size: 2.4rem; color: #05070d;
+            box-shadow: 0 0 50px -6px var(--accent);
+        }
+
+        .orbit-wrap {
+            position: absolute; inset: -55px;
+            transform-style: preserve-3d;
+            pointer-events: none;
+        }
+        .orbit-ring {
+            position: absolute; inset: 0;
+            border: 1px solid var(--glass-border);
+            border-radius: 50%;
+        }
+        .ring-a { transform: rotateX(72deg) rotateZ(0deg); }
+        .ring-b { transform: rotateX(72deg) rotateZ(60deg); inset: -25px; opacity: .6; }
+
+        .orbit-spin {
+            position: absolute; inset: 0;
+            animation: spin 9s linear infinite;
+        }
+        .orbit-spin.rev { animation-duration: 13s; animation-direction: reverse; }
+        .orbit-dot {
+            position: absolute; top: -5px; left: 50%;
+            width: 10px; height: 10px; margin-left: -5px;
+            border-radius: 50%; background: var(--accent);
+            box-shadow: 0 0 16px 2px var(--accent);
+        }
+        .ring-b .orbit-dot { background: var(--accent-2); box-shadow: 0 0 16px 2px var(--accent-2); }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ============ STATS STRIP ============ */
+        .stats-strip { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 2.75rem 0; }
+        .stat-item { text-align: center; }
+        .stat-num {
+            font-family: var(--font-mono); font-weight: 600;
+            font-size: clamp(1.6rem, 3vw, 2.2rem);
+            color: var(--text-main);
+        }
+        .stat-num .u { color: var(--accent); }
+        .stat-label { font-size: 0.8rem; color: var(--text-sec); letter-spacing: .04em; margin-top: 4px; }
+
+        /* ============ FEATURE CARDS (premium layered-depth treatment) ============ */
+        .features-wrap { padding: 6rem 0; }
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(14px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            color: var(--text-main);
+            padding: 2.1rem;
+            height: 100%;
+            opacity: 0;
+            transform: translateY(24px);
+            transform-style: preserve-3d;
+            perspective: 700px;
+            position: relative;
+            overflow: hidden;
+            transition: border-color .35s ease, box-shadow .35s ease;
+            will-change: transform;
+        }
+        .glass-card.in-view { animation: cardIn .7s cubic-bezier(.2,.8,.2,1) forwards; }
+        @keyframes cardIn { to { opacity: 1; transform: translateY(0px); } }
+
+        /* Cursor-tracked specular light on the glass surface */
+        .glass-card::after {
+            content: '';
+            position: absolute; inset: 0;
+            background: radial-gradient(260px circle at var(--mx,50%) var(--my,30%), rgba(255,255,255,.12), transparent 60%);
+            opacity: 0;
+            transition: opacity .3s ease;
+            pointer-events: none;
+        }
+        .glass-card:hover::after { opacity: 1; }
+
+        /* Layered "stepped edge" shadow — real card thickness, not a flat rotate */
+        .glass-card:hover {
+            border-color: var(--accent);
+            box-shadow:
+                0 1px 0 rgba(34,211,238,.4),
+                0 2px 0 rgba(34,211,238,.32),
+                0 3px 0 rgba(34,211,238,.24),
+                0 4px 0 rgba(34,211,238,.16),
+                0 30px 55px -14px rgba(34,211,238,.3),
+                0 0 55px rgba(34,211,238,.2);
+        }
+
+        .card-tag {
+            font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: .1em;
+            color: var(--text-sec); margin-bottom: 1rem; display: block;
+            transition: transform .3s ease;
+        }
+        .glass-card:hover .card-tag { transform: translateZ(20px); }
+
+        .feature-icon {
+            width: 56px; height: 56px;
+            background: rgba(34, 211, 238, 0.1);
+            color: var(--accent);
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 14px; font-size: 1.4rem; margin-bottom: 1.4rem;
+            border: 1px solid var(--glass-border);
+            transition: transform .3s ease;
+        }
+        .glass-card:hover .feature-icon { transform: translateZ(55px) scale(1.1); }
+
+        .glass-card h4 {
+            font-family: var(--font-display); font-weight: 600;
+            transition: transform .3s ease;
+        }
+        .glass-card:hover h4 { transform: translateZ(35px); }
+
+        .glass-card p { color: var(--text-sec); font-size: 0.95rem; margin-bottom: 0; transition: transform .3s ease; }
+        .glass-card:hover p { transform: translateZ(18px); }
+
+        /* ============ FOOTER ============ */
+        .site-footer {
+            border-top: 1px solid var(--line);
+            padding: 2rem 0;
+            text-align: center;
+            color: var(--text-sec);
+            font-size: 0.9rem;
+            font-family: var(--font-mono);
+        }
+
+        @media (max-width: 991px) {
+            .hero-visual { margin-top: 3rem; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation: none !important; transition: none !important; }
+        }
+    </style>
+</head>
+
+<body>
+
+<canvas id="particles"></canvas>
+<div class="bg-grid"></div>
+<div class="bg-glow bg-glow-a"></div>
+<div class="bg-glow bg-glow-b"></div>
+
+<div th:replace="~{navbar :: navbar}"></div>
+
+<div class="hero-section">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <span class="eyebrow"><span class="dot"></span> NEXEXAM // LIVE SESSION</span>
+
+                <h1 class="hero-title mb-4">Elevate Your <br><span class="grad">Exam Experience</span></h1>
+
+                <p class="lead-copy mb-5">
+                    A futuristic platform built for high-performance testing. Manage exams, track analytics, and achieve excellence seamlessly.
+                </p>
+
+                <div class="d-flex flex-column align-items-start gap-2">
+                    <div class="d-flex gap-3">
+                        <a th:href="@{/login}" class="btn btn-modern btn-primary-custom shadow">
+                            Get Started <i class="bi bi-arrow-right ms-2"></i>
+                        </a>
+                        <a th:href="@{/register}" class="btn btn-modern btn-outline-secondary">
+                            Create Account
+                        </a>
+                    </div>
+
+                    <p class="encourage-chip mb-0"><b>ALL THE BEST</b> &nbsp;🧿 ✨ 🏆</p>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="hero-visual">
+                    <div class="stack-3d" id="stack3d">
+                        <div class="orbit-wrap">
+                            <div class="orbit-ring ring-a">
+                                <div class="orbit-spin"><span class="orbit-dot"></span></div>
+                            </div>
+                            <div class="orbit-ring ring-b">
+                                <div class="orbit-spin rev"><span class="orbit-dot"></span></div>
+                            </div>
+                        </div>
+
+                        <div class="layer layer-3"></div>
+                        <div class="layer layer-2"></div>
+                        <div class="layer layer-1">
+                            <div class="glow-icon"><i class="bi bi-mortarboard-fill"></i></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="stats-strip">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-6 col-lg-3 stat-item">
+                <div class="stat-num" data-target="12000" data-suffix="+">0</div>
+                <div class="stat-label">Exams Delivered</div>
+            </div>
+            <div class="col-6 col-lg-3 stat-item">
+                <div class="stat-num" data-target="99.9" data-decimal="1" data-suffix="%">0</div>
+                <div class="stat-label">Platform Uptime</div>
+            </div>
+            <div class="col-6 col-lg-3 stat-item">
+                <div class="stat-num" data-target="40" data-suffix="+">0</div>
+                <div class="stat-label">Institutions Onboard</div>
+            </div>
+            <div class="col-6 col-lg-3 stat-item">
+                <div class="stat-num" data-target="200" data-suffix="ms"><span class="u">&lt;</span>0</div>
+                <div class="stat-label">Proctoring Latency</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="features-wrap">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card glass-card">
+                    <span class="card-tag">MODULE · STUDENTS</span>
+                    <div class="feature-icon"><i class="bi bi-mortarboard-fill"></i></div>
+                    <h4>For Students</h4>
+                    <p>Take AI-integrated timed exams with instant feedback and deep performance analytics.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card glass-card">
+                    <span class="card-tag" style="color: var(--accent-2);">MODULE · SECURITY</span>
+                    <div class="feature-icon" style="color: var(--accent-2); background: rgba(139, 92, 246, 0.12);"><i class="bi bi-shield-lock-fill"></i></div>
+                    <h4>Security First</h4>
+                    <p>Anti-cheat monitoring and end-to-end encryption for your valuable data.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card glass-card">
+                    <span class="card-tag" style="color: var(--ok);">MODULE · ADMIN</span>
+                    <div class="feature-icon" style="color: var(--ok); background: rgba(52, 211, 153, 0.12);"><i class="bi bi-cpu-fill"></i></div>
+                    <h4>Admin Control</h4>
+                    <p>Robust dashboard to manage subjects, questions, and students in real-time.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<footer class="site-footer">
+    © <span id="year"></span> NexExam | Developed by Harsh Sinha ❤️
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<script th:inline="none">
+    document.addEventListener('DOMContentLoaded', () => {
+        // footer year
+        document.getElementById('year').textContent = new Date().getFullYear();
+
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        // ---- 3D tilt hero stack — spring-physics smoothing ----
+        const visual = document.querySelector('.hero-visual');
+        const stack3d = document.getElementById('stack3d');
+        if (visual && stack3d && !reduceMotion) {
+            let targetRX = 0, targetRY = 0, curRX = 0, curRY = 0, hovering = false, raf = null;
+
+            function loop() {
+                curRX += (targetRX - curRX) * 0.1;
+                curRY += (targetRY - curRY) * 0.1;
+                stack3d.style.transform = `rotateX(${curRX.toFixed(2)}deg) rotateY(${curRY.toFixed(2)}deg)`;
+                if (hovering || Math.abs(curRX - targetRX) > 0.05 || Math.abs(curRY - targetRY) > 0.05) {
+                    raf = requestAnimationFrame(loop);
+                } else {
+                    raf = null;
+                }
+            }
+            function ensureLoop() { if (!raf) raf = requestAnimationFrame(loop); }
+
+            visual.addEventListener('mousemove', (e) => {
+                const rect = visual.getBoundingClientRect();
+                const x = (e.clientX - rect.left) / rect.width;
+                const y = (e.clientY - rect.top) / rect.height;
+                targetRY = (x - 0.5) * 24;
+                targetRX = -(y - 0.5) * 24;
+                hovering = true;
+                ensureLoop();
+            });
+            visual.addEventListener('mouseleave', () => {
+                hovering = false;
+                targetRX = 0; targetRY = 0;
+                ensureLoop();
+            });
+        }
+
+        // ---- 3D tilt on feature cards — spring-physics + cursor-tracked light ----
+        if (!reduceMotion) {
+            document.querySelectorAll('.glass-card').forEach((card) => {
+                let targetRX = 0, targetRY = 0, targetLift = 0;
+                let curRX = 0, curRY = 0, curLift = 0;
+                let hovering = false, raf = null;
+
+                function loop() {
+                    curRX += (targetRX - curRX) * 0.12;
+                    curRY += (targetRY - curRY) * 0.12;
+                    curLift += (targetLift - curLift) * 0.12;
+                    card.style.transform = `perspective(700px) rotateX(${curRX.toFixed(2)}deg) rotateY(${curRY.toFixed(2)}deg) translateY(${curLift.toFixed(2)}px)`;
+                    if (hovering || Math.abs(curRX - targetRX) > 0.05 || Math.abs(curRY - targetRY) > 0.05 || Math.abs(curLift - targetLift) > 0.05) {
+                        raf = requestAnimationFrame(loop);
+                    } else {
+                        raf = null;
+                    }
+                }
+                function ensureLoop() { if (!raf) raf = requestAnimationFrame(loop); }
+
+                card.addEventListener('mousemove', (e) => {
+                    const rect = card.getBoundingClientRect();
+                    const px = (e.clientX - rect.left) / rect.width;
+                    const py = (e.clientY - rect.top) / rect.height;
+                    targetRY = (px - 0.5) * 12;
+                    targetRX = -(py - 0.5) * 12;
+                    targetLift = -8;
+                    hovering = true;
+                    card.style.setProperty('--mx', (px * 100).toFixed(1) + '%');
+                    card.style.setProperty('--my', (py * 100).toFixed(1) + '%');
+                    ensureLoop();
+                });
+                card.addEventListener('mouseleave', () => {
+                    hovering = false;
+                    targetRX = 0; targetRY = 0; targetLift = 0;
+                    ensureLoop();
+                });
+            });
+        }
+
+        // ---- particle background ----
+        const canvas = document.getElementById('particles');
+        if (canvas) {
+            const ctx = canvas.getContext('2d');
+            let w, h, particles;
+
+            function resize() {
+                w = canvas.width = window.innerWidth;
+                h = canvas.height = window.innerHeight;
+            }
+            function makeParticles() {
+                const count = Math.min(90, Math.floor((w * h) / 18000));
+                particles = Array.from({ length: count }, () => ({
+                    x: Math.random() * w,
+                    y: Math.random() * h,
+                    r: Math.random() * 1.6 + 0.4,
+                    vx: (Math.random() - 0.5) * 0.15,
+                    vy: (Math.random() - 0.5) * 0.15,
+                    tw: Math.random() * Math.PI * 2
+                }));
+            }
+            function getColor() {
+                const dark = document.documentElement.getAttribute('data-bs-theme') !== 'light';
+                return dark ? '34,211,238' : '8,145,178';
+            }
+            function draw() {
+                ctx.clearRect(0, 0, w, h);
+                const rgb = getColor();
+                particles.forEach(p => {
+                    p.x += p.vx; p.y += p.vy; p.tw += 0.015;
+                    if (p.x < 0) p.x = w; if (p.x > w) p.x = 0;
+                    if (p.y < 0) p.y = h; if (p.y > h) p.y = 0;
+                    const alpha = 0.25 + Math.sin(p.tw) * 0.25;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(${rgb},${alpha})`;
+                    ctx.fill();
+                });
+                if (!reduceMotion) requestAnimationFrame(draw);
+            }
+
+            resize();
+            makeParticles();
+            draw();
+            window.addEventListener('resize', () => { resize(); makeParticles(); });
+        }
+
+        // ---- scroll reveal for feature cards ----
+        const cards = document.querySelectorAll('.glass-card');
+        const cardObserver = new IntersectionObserver((entries) => {
+            entries.forEach((entry, i) => {
+                if (entry.isIntersecting) {
+                    setTimeout(() => entry.target.classList.add('in-view'), i * 90);
+                    cardObserver.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.2 });
+        cards.forEach(c => cardObserver.observe(c));
+
+        // ---- count-up stats ----
+        const statEls = document.querySelectorAll('.stat-num');
+        const statObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (!entry.isIntersecting) return;
+                const el = entry.target;
+                const target = parseFloat(el.dataset.target);
+                const decimals = parseInt(el.dataset.decimal || '0');
+                const suffix = el.dataset.suffix || '';
+                const prefix = el.querySelector('.u') ? el.querySelector('.u').outerHTML : '';
+                if (reduceMotion) {
+                    el.innerHTML = prefix + target.toFixed(decimals) + suffix;
+                } else {
+                    let start = 0;
+                    const duration = 1400;
+                    const startTime = performance.now();
+                    function tick(now) {
+                        const progress = Math.min((now - startTime) / duration, 1);
+                        const eased = 1 - Math.pow(1 - progress, 3);
+                        const val = target * eased;
+                        el.innerHTML = prefix + val.toFixed(decimals) + suffix;
+                        if (progress < 1) requestAnimationFrame(tick);
+                    }
+                    requestAnimationFrame(tick);
+                }
+                statObserver.unobserve(el);
+            });
+        }, { threshold: 0.4 });
+        statEls.forEach(s => statObserver.observe(s));
+    });
+</script>
+
+</body>
+</html>

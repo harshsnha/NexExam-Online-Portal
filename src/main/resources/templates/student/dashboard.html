@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexExam - Student Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Flash prevention -->
+    <script th:inline="none">
+        (function () {
+            var t = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-bs-theme', t);
+        })();
+    </script>
+
+    <style>
+        :root {
+            --primary-bg: #090b14; --accent-color: #22d3ee; --accent-2: #8b5cf6; --text-main: #f8fafc;
+            --text-sec: #9099b8; --glass-bg: rgba(18, 22, 42, 0.68);
+            --glass-border: rgba(255, 255, 255, 0.09);
+            --font-display: 'Space Grotesk', sans-serif;
+            --font-body: 'Inter', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        [data-bs-theme="light"] {
+            --primary-bg: #f4f5fb; --accent-color: #0891b2; --accent-2: #7c3aed; --text-main: #1b2140;
+            --text-sec: #5b6489; --glass-bg: rgba(255, 255, 255, 0.8);
+            --glass-border: rgba(15, 23, 42, 0.09);
+        }
+
+        body {
+            background-color: var(--primary-bg) !important;
+            font-family: var(--font-body);
+            color: var(--text-main);
+            transition: background-color 0.4s ease, color 0.4s ease;
+        }
+
+        h2, h4, h5 { font-family: var(--font-display); }
+
+        #bgCanvas { position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: 1; }
+        [data-bs-theme="light"] #bgCanvas { opacity: .3; }
+
+        .main-container { position: relative; z-index: 10; padding-top: 100px; padding-bottom: 50px; }
+
+        /* ── Layered-depth premium cards ── */
+        .glass-panel {
+            background: var(--glass-bg) !important;
+            backdrop-filter: blur(18px);
+            border: 1px solid var(--glass-border) !important;
+            border-radius: 24px;
+            padding: 1.5rem;
+        }
+
+        .kpi-card, .exam-box {
+            background: var(--glass-bg) !important;
+            backdrop-filter: blur(18px);
+            border: 1px solid var(--glass-border) !important;
+            border-radius: 22px;
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
+            transform-style: preserve-3d;
+            perspective: 700px;
+            transition: border-color .3s ease, box-shadow .35s ease;
+            will-change: transform;
+        }
+
+        .exam-box { padding: 0; overflow: hidden; }
+
+        .exam-box-header {
+            height: 84px;
+            background: linear-gradient(135deg, var(--accent-2), var(--accent-color));
+            position: relative;
+            display: flex; align-items: flex-end; justify-content: space-between;
+            padding: 14px 20px;
+            transform: translateZ(0);
+        }
+        .exam-box-header::before {
+            content: '';
+            position: absolute; inset: 0;
+            background-image: radial-gradient(rgba(255,255,255,.35) 1px, transparent 1px);
+            background-size: 14px 14px;
+            opacity: .5;
+        }
+        .exam-box-icon {
+            width: 46px; height: 46px;
+            border-radius: 12px;
+            background: rgba(9,11,20,.28);
+            backdrop-filter: blur(6px);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.3rem; color: #fff;
+            position: relative; z-index: 1;
+            transform: translateZ(30px);
+        }
+        .exam-box-duration {
+            background: rgba(9,11,20,.3);
+            backdrop-filter: blur(6px);
+            color: #fff;
+            font-size: .72rem; font-weight: 700;
+            padding: 4px 10px; border-radius: 50px;
+            position: relative; z-index: 1;
+            transform: translateZ(30px);
+        }
+        .exam-box-body { padding: 1.4rem 1.6rem 1.6rem; }
+        .exam-box-body h5 { margin-bottom: .3rem; }
+        .exam-box-meta { font-size: .78rem; color: var(--text-sec); margin-bottom: 0; }
+
+        /* ── Performance analytics ── */
+        .chart-card { padding: 1.5rem; }
+        .chart-card h6 {
+            font-family: var(--font-display);
+            font-size: .82rem;
+            letter-spacing: .5px;
+            text-transform: uppercase;
+            color: var(--text-sec);
+            margin-bottom: 1.2rem;
+        }
+        .chart-wrap { position: relative; height: 220px; }
+        .accuracy-stat-row {
+            display: flex; justify-content: space-around;
+            margin-top: 14px; padding-top: 14px;
+            border-top: 1px solid var(--glass-border);
+        }
+        .accuracy-stat { text-align: center; }
+        .accuracy-stat .val { font-family: var(--font-mono); font-weight: 700; font-size: 1.2rem; }
+        .accuracy-stat .lbl { font-size: .65rem; text-transform: uppercase; letter-spacing: .5px; color: var(--text-sec); }
+
+        /* Cursor-tracked specular light */
+        .kpi-card::after, .exam-box::after {
+            content: '';
+            position: absolute; inset: 0;
+            background: radial-gradient(220px circle at var(--mx,50%) var(--my,30%), rgba(255,255,255,.14), transparent 60%);
+            opacity: 0;
+            transition: opacity .3s ease;
+            pointer-events: none;
+        }
+        .kpi-card:hover::after, .exam-box:hover::after { opacity: 1; }
+
+        /* Stepped-edge shadow = real thickness, not a flat rotate */
+        .kpi-card:hover, .exam-box:hover {
+            border-color: rgba(34,211,238,.5) !important;
+            box-shadow:
+                0 1px 0 rgba(34,211,238,.4),
+                0 2px 0 rgba(34,211,238,.3),
+                0 3px 0 rgba(34,211,238,.2),
+                0 4px 0 rgba(34,211,238,.12),
+                0 30px 55px -14px rgba(0,0,0,.5),
+                0 0 50px rgba(34,211,238,.22);
+        }
+
+        .kpi-value {
+            font-family: var(--font-mono);
+            letter-spacing: -0.01em;
+            transform: translateZ(15px);
+            transition: transform .3s ease;
+            display: block;
+        }
+        .kpi-card:hover .kpi-value { transform: translateZ(42px); }
+
+        .kpi-icon {
+            width: 40px; height: 40px;
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(34,211,238,.1);
+            color: var(--accent-color);
+            margin: 0 auto 0.75rem;
+            font-size: 1.1rem;
+            transform: translateZ(20px);
+            transition: transform .3s ease;
+        }
+        .kpi-card:hover .kpi-icon { transform: translateZ(55px) scale(1.1); }
+
+        .exam-box h5, .exam-box p, .exam-box button {
+            transform: translateZ(15px);
+            transition: transform .3s ease;
+        }
+        .exam-box:hover h5 { transform: translateZ(35px); }
+        .exam-box:hover p { transform: translateZ(22px); }
+        .exam-box:hover button { transform: translateZ(28px); }
+
+        /* ── Recent History: animated timeline (unique, not a plain table) ── */
+        .history-timeline {
+            position: relative;
+            padding-left: 6px;
+        }
+
+        .history-item {
+            display: flex;
+            gap: 18px;
+            position: relative;
+            padding-bottom: 22px;
+            opacity: 0;
+            animation: histIn .5s ease-out both;
+        }
+
+        @keyframes histIn {
+            from { opacity: 0; transform: translateX(-14px); }
+            to   { opacity: 1; transform: translateX(0); }
+        }
+
+        /* Connecting vertical line */
+        .history-item::before {
+            content: '';
+            position: absolute;
+            left: 20px; top: 44px; bottom: 0;
+            width: 2px;
+            background: linear-gradient(to bottom, var(--glass-border), transparent);
+        }
+        .history-item.is-last::before { display: none; }
+
+        .history-marker {
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.05rem;
+            z-index: 1;
+            box-shadow: 0 0 0 4px var(--primary-bg);
+        }
+        .marker-pass { background: rgba(52,211,153,.15); color: #34d399; border: 1.5px solid rgba(52,211,153,.4); }
+        .marker-fail { background: rgba(248,113,113,.15); color: #f87171; border: 1.5px solid rgba(248,113,113,.4); }
+
+        .history-card {
+            flex: 1;
+            background: rgba(255,255,255,.02);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 16px 18px;
+            transition: transform .25s ease, border-color .25s ease, background .25s ease;
+        }
+        .history-item:hover .history-card {
+            transform: translateX(4px);
+            border-color: rgba(34,211,238,.35);
+            background: rgba(34,211,238,.03);
+        }
+
+        .history-card-top {
+            display: flex; justify-content: space-between; align-items: flex-start;
+            margin-bottom: 12px; gap: 10px;
+        }
+        .history-title { font-weight: 700; font-size: .95rem; }
+        .history-date { font-size: .75rem; color: var(--text-sec); margin-top: 2px; }
+
+        .history-badge {
+            font-size: .62rem; font-weight: 800; letter-spacing: .6px;
+            padding: 4px 10px; border-radius: 50px; white-space: nowrap;
+        }
+        .badge-pass { background: rgba(52,211,153,.12); color: #34d399; border: 1px solid rgba(52,211,153,.3); }
+        .badge-fail { background: rgba(248,113,113,.12); color: #f87171; border: 1px solid rgba(248,113,113,.3); }
+
+        .history-progress-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+        .history-bar-track {
+            flex: 1; height: 6px; border-radius: 4px;
+            background: rgba(255,255,255,.06); overflow: hidden;
+        }
+        .history-bar-fill {
+            height: 100%; border-radius: 4px; width: 0%;
+            transition: width 1s cubic-bezier(.22,1,.36,1);
+        }
+        .fill-pass { background: linear-gradient(90deg, #34d399, #22d3ee); }
+        .fill-fail { background: linear-gradient(90deg, #f87171, #f59e0b); }
+        .history-pct { font-family: var(--font-mono); font-weight: 700; font-size: .82rem; min-width: 48px; text-align: right; }
+
+        .history-card-bottom { display: flex; justify-content: space-between; align-items: center; }
+        .history-score { font-size: .78rem; color: var(--text-sec); }
+
+        /* Review button — now a proper pill button so it's easy to spot/tap,
+           instead of a plain text link that was easy to miss */
+        .history-review-btn {
+            font-size: .78rem;
+            font-weight: 700;
+            letter-spacing: .2px;
+            color: #090b14 !important;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, var(--accent-2), var(--accent-color));
+            padding: 7px 16px;
+            border-radius: 50px;
+            box-shadow: 0 4px 14px rgba(34,211,238,.25);
+            transition: transform .2s ease, box-shadow .2s ease, gap .2s ease;
+        }
+        .history-review-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 22px rgba(34,211,238,.4);
+            gap: 9px;
+            color: #090b14 !important;
+        }
+
+        .btn-initiate {
+            background: linear-gradient(135deg, var(--accent-2), var(--accent-color));
+            color: #090b14; border: none; border-radius: 12px;
+            padding: 12px; font-weight: 700;
+            font-family: var(--font-display);
+            transition: transform .25s ease, box-shadow .25s ease;
+        }
+        .btn-initiate:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 24px -8px rgba(34,211,238,.5);
+            color: #090b14;
+        }
+
+        /* ---- Welcome 3D badge: layered stack + always-spinning orbit rings ---- */
+        .hero-3d-wrap { perspective: 1100px; }
+        .stack-3d {
+            position: relative;
+            width: 110px; height: 110px;
+            transform-style: preserve-3d;
+            transition: transform .15s ease-out;
+        }
+        .layer {
+            position: absolute; inset: 0;
+            border-radius: 20px;
+            border: 1px solid var(--glass-border);
+            background: linear-gradient(160deg, rgba(255,255,255,.08), rgba(255,255,255,.02));
+            box-shadow: 0 20px 40px -14px rgba(0,0,0,.5);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .layer-2 { animation: floatL2 6s ease-in-out infinite; }
+        .layer-1 { animation: floatL1 5s ease-in-out infinite; }
+        @keyframes floatL2 { 0%,100% { transform: translateZ(-30px) rotate(6deg) scale(.9) translateY(0px); opacity:.7; } 50% { transform: translateZ(-30px) rotate(6deg) scale(.9) translateY(8px); opacity:.7; } }
+        @keyframes floatL1 { 0%,100% { transform: translateZ(15px) rotate(-5deg) translateY(0px); } 50% { transform: translateZ(15px) rotate(-5deg) translateY(-10px); } }
+
+        .layer-1 .rocket-icon {
+            width: 56px; height: 56px; border-radius: 14px;
+            background: linear-gradient(135deg, var(--accent-color), var(--accent-2));
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.5rem; color: #090b14;
+            box-shadow: 0 0 30px -4px var(--accent-color);
+        }
+
+        .orbit-wrap { position: absolute; inset: -34px; transform-style: preserve-3d; pointer-events: none; }
+        .orbit-ring { position: absolute; inset: 0; border: 1.5px solid rgba(34,211,238,.45); border-radius: 50%; }
+        .ring-a { transform: rotateX(70deg); }
+        .ring-b { transform: rotateX(70deg) rotateZ(55deg); inset: -16px; border-color: rgba(139,92,246,.4); }
+        .orbit-spin { position: absolute; inset: 0; animation: spin 6s linear infinite; }
+        .orbit-spin.rev { animation-duration: 9s; animation-direction: reverse; }
+        .orbit-dot {
+            position: absolute; top: -6px; left: 50%; width: 12px; height: 12px; margin-left: -6px;
+            border-radius: 50%; background: var(--accent-color);
+            box-shadow: 0 0 18px 3px var(--accent-color);
+        }
+        .ring-b .orbit-dot { background: var(--accent-2); box-shadow: 0 0 18px 3px var(--accent-2); }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ---- Continuous gentle float on cards (visible even without hover) ---- */
+        .float-wrap { animation: gentleFloat 4.5s ease-in-out infinite; }
+        .col-md-4:nth-child(2) .float-wrap { animation-delay: .5s; }
+        .col-md-4:nth-child(3) .float-wrap { animation-delay: 1s; }
+        @keyframes gentleFloat { 0%,100% { transform: translateY(0px); } 50% { transform: translateY(-8px); } }
+
+        #liveClock { font-family: var(--font-mono); font-size: 0.85rem; }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation: none !important; transition: none !important; }
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="bgCanvas"></canvas>
+
+<div th:replace="~{navbar :: navbar}"></div>
+
+<main class="container main-container">
+    <div class="d-flex align-items-center mb-5">
+        <div class="hero-3d-wrap me-4">
+            <div class="stack-3d" id="welcomeStack">
+                <div class="orbit-wrap">
+                    <div class="orbit-ring ring-a"><div class="orbit-spin"><span class="orbit-dot"></span></div></div>
+                    <div class="orbit-ring ring-b"><div class="orbit-spin rev"><span class="orbit-dot"></span></div></div>
+                </div>
+                <div class="layer layer-2"></div>
+                <div class="layer layer-1">
+                    <div class="rocket-icon"><i class="bi bi-rocket-takeoff-fill"></i></div>
+                </div>
+            </div>
+        </div>
+        <div>
+            <h2 class="fw-bold mb-0">Welcome, <span th:text="${student.fullName}">Harsh</span>!</h2>
+            <p style="color: var(--text-sec);" class="mb-0" id="liveClock">System Status: Active</p>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-5">
+        <div class="col-md-4">
+            <div class="float-wrap">
+            <div class="kpi-card tilt-card text-center">
+                <div class="kpi-icon"><i class="bi bi-journal-check"></i></div>
+                <span class="d-block h2 fw-800 kpi-value" th:text="${totalTaken}">0</span>
+                <small class="text-uppercase fw-bold" style="color: var(--text-sec);">Exams Taken</small>
+            </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="float-wrap">
+            <div class="kpi-card tilt-card text-center">
+                <div class="kpi-icon"><i class="bi bi-graph-up-arrow"></i></div>
+                <span class="d-block h2 fw-800 kpi-value" th:text="${#numbers.formatDecimal(averageScore, 1, 1) + '%'}">0%</span>
+                <small class="text-uppercase fw-bold" style="color: var(--text-sec);">Average Score</small>
+            </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="float-wrap">
+            <div class="kpi-card tilt-card text-center">
+                <div class="kpi-icon"><i class="bi bi-trophy"></i></div>
+                <span class="d-block h2 fw-800 kpi-value" th:text="${highestScore} + '%'">0%</span>
+                <small class="text-uppercase fw-bold" style="color: var(--text-sec);">Best Performance</small>
+            </div>
+            </div>
+        </div>
+    </div>
+
+    <h4 class="fw-bold mb-4" style="color: var(--accent-color);">Live Exams</h4>
+    <div class="row g-4 mb-5">
+        <div th:if="${#lists.isEmpty(availableExams)}" class="col-12 text-center py-5 glass-panel" style="color: var(--text-sec);">
+            No exams available right now.
+        </div>
+        <div th:each="exam, iterEx : ${availableExams}" class="col-md-4">
+            <div class="exam-box tilt-card">
+                <div class="exam-box-header" th:style="${iterEx.index % 3 == 0 ? 'background: linear-gradient(135deg, var(--accent-2), var(--accent-color));' : (iterEx.index % 3 == 1 ? 'background: linear-gradient(135deg, #22d3ee, #34d399);' : 'background: linear-gradient(135deg, #f59e0b, #8b5cf6);')}">
+                    <div class="exam-box-icon"><i class="bi bi-journal-code"></i></div>
+                    <div class="exam-box-duration"><i class="bi bi-clock me-1"></i><span th:text="${exam.durationInMinutes}"></span> min</div>
+                </div>
+                <div class="exam-box-body">
+                    <h5 class="fw-bold" th:text="${exam.title}">Exam</h5>
+                    <p class="exam-box-meta"><i class="bi bi-patch-question me-1"></i><span th:text="${#lists.size(exam.questions)}">10</span> Questions</p>
+                    <button th:onclick="'goFullscreenAndStart(\'/exam/' + ${exam.id} + '\')'" class="btn btn-initiate w-100 mt-3">
+                        <i class="bi bi-play-fill me-1"></i>Start Exam
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden data points for charts — avoids inline JS array literals entirely -->
+    <div id="resultsData" style="display:none;">
+        <span th:each="result : ${pastResults}" class="result-point"
+              th:attr="data-title=${result.exam.title}, data-pct=${result.totalMarks > 0 ? #numbers.formatDecimal((result.scoreAchieved * 100.0 / result.totalMarks), 1, 1) : 0}, data-date=${#temporals.format(result.submissionTime, 'dd MMM')}">
+        </span>
+    </div>
+
+    <h4 class="fw-bold mb-4" style="color: var(--accent-2);">Performance Analytics</h4>
+    <div class="row g-4 mb-5">
+        <div class="col-lg-7">
+            <div class="glass-panel chart-card tilt-card">
+                <h6><i class="bi bi-graph-up me-2"></i>Score Trend (Recent Attempts)</h6>
+                <div class="chart-wrap">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="glass-panel chart-card tilt-card">
+                <h6><i class="bi bi-pie-chart me-2"></i>Accuracy Breakdown</h6>
+                <div class="chart-wrap" style="height: 180px;">
+                    <canvas id="accuracyChart"></canvas>
+                </div>
+                <div class="accuracy-stat-row">
+                    <div class="accuracy-stat">
+                        <div class="val" style="color: #34d399;" id="passCountVal">0</div>
+                        <div class="lbl">Qualified</div>
+                    </div>
+                    <div class="accuracy-stat">
+                        <div class="val" style="color: #f87171;" id="failCountVal">0</div>
+                        <div class="lbl">Below 30%</div>
+                    </div>
+                    <div class="accuracy-stat">
+                        <div class="val" style="color: var(--accent-color);" id="avgAccuracyVal">0%</div>
+                        <div class="lbl">Avg Accuracy</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="glass-panel">
+        <h5 class="fw-bold mb-4" style="color: var(--accent-2);">Recent History</h5>
+
+        <div th:if="${#lists.isEmpty(pastResults)}" class="text-center py-4" style="color: var(--text-sec);">
+            <i class="bi bi-journal-x d-block mb-2" style="font-size: 1.8rem; opacity: .4;"></i>
+            No attempts yet — your history will show up here.
+        </div>
+
+        <div class="history-timeline" th:unless="${#lists.isEmpty(pastResults)}">
+            <div class="history-item" th:each="result, iterH : ${pastResults}"
+                 th:with="pct=${result.totalMarks > 0 ? (result.scoreAchieved * 100.0 / result.totalMarks) : 0}"
+                 th:style="'animation-delay:' + ${iterH.index * 0.07} + 's'"
+                 th:classappend="${iterH.last} ? ' is-last' : ''">
+
+                <div class="history-marker" th:classappend="${pct >= 30 ? 'marker-pass' : 'marker-fail'}">
+                    <i th:class="${pct >= 30 ? 'bi bi-check-lg' : 'bi bi-x-lg'}"></i>
+                </div>
+
+                <div class="history-card">
+                    <div class="history-card-top">
+                        <div>
+                            <div class="history-title" th:text="${result.exam.title}">Exam Title</div>
+                            <div class="history-date">
+                                <i class="bi bi-calendar-event me-1"></i>
+                                <span th:text="${#temporals.format(result.submissionTime, 'dd MMM yyyy')}">Date</span>
+                            </div>
+                        </div>
+                        <span class="history-badge" th:classappend="${pct >= 30 ? 'badge-pass' : 'badge-fail'}"
+                              th:text="${pct >= 30 ? 'QUALIFIED' : 'FAILED'}"></span>
+                    </div>
+
+                    <div class="history-progress-row">
+                        <div class="history-bar-track">
+                            <div class="history-bar-fill" th:classappend="${pct >= 30 ? 'fill-pass' : 'fill-fail'}"
+                                 th:attr="data-target=${pct}"></div>
+                        </div>
+                        <div class="history-pct" th:text="${#numbers.formatDecimal(pct, 1, 1) + '%'}">0%</div>
+                    </div>
+
+                    <div class="history-card-bottom">
+                        <span class="history-score" th:text="${result.scoreAchieved + ' / ' + result.totalMarks} + ' pts'">0 / 0 pts</span>
+                        <a th:href="@{/student/review/{id}(id=${result.id})}" class="history-review-btn">
+                            <i class="bi bi-search"></i> Review <i class="bi bi-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- Three.js — real 3D background -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script th:inline="none">
+(function () {
+    if (typeof THREE === 'undefined') { console.error('[NexExam 3D] Three.js failed to load.'); return; }
+    try {
+    const canvas = document.getElementById('bgCanvas');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+
+    function isLightTheme() { return document.documentElement.getAttribute('data-bs-theme') === 'light'; }
+    const DARK_BG = 0x090b14, LIGHT_BG = 0xf4f5fb;
+
+    const scene = new THREE.Scene();
+    renderer.setClearColor(isLightTheme() ? LIGHT_BG : DARK_BG, 1);
+    scene.fog = new THREE.FogExp2(isLightTheme() ? LIGHT_BG : DARK_BG, 0.038);
+
+    const camera = new THREE.PerspectiveCamera(62, innerWidth / innerHeight, 0.1, 200);
+    camera.position.set(0, 2, 24);
+    function resize() { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
+    resize(); window.addEventListener('resize', resize);
+
+    scene.add(new THREE.AmbientLight(0x0d2b3a, 1.5));
+    const pl1 = new THREE.PointLight(0x22d3ee, 2.5, 45); pl1.position.set(-8,8,10); scene.add(pl1);
+    const pl2 = new THREE.PointLight(0x8b5cf6, 2, 35); pl2.position.set(10,-5,8); scene.add(pl2);
+
+    function mat(c, op=1) { return new THREE.MeshStandardMaterial({ color:c, metalness:.85, roughness:.15, transparent:op<1, opacity:op, emissive:c, emissiveIntensity:.1 }); }
+
+    const rings = [];
+    var ringData = [[8,.03,0.25,0.0,0x22d3ee],[6.5,.038,0.7,0.9,0x8b5cf6],[5,.045,1.2,1.8,0x38bdf8],[3.5,.052,0.5,2.6,0xa78bfa]];
+    ringData.forEach(function (d) {
+        var r=d[0],t=d[1],rx=d[2],ry=d[3],col=d[4];
+        var m = new THREE.Mesh(new THREE.TorusGeometry(r,t,8,140), mat(col,.55)); m.rotation.x=rx; m.rotation.y=ry; scene.add(m); rings.push(m);
+    });
+
+    // Rocket-inspired signature — echoes the welcome badge icon
+    const rocketGeo = new THREE.ConeGeometry(0.6, 1.6, 4);
+    const rocketMesh = new THREE.Mesh(rocketGeo, new THREE.MeshStandardMaterial({ color: 0x22d3ee, metalness: .9, roughness: .1, emissive: 0x22d3ee, emissiveIntensity: .35, transparent: true, opacity: .85 }));
+    const rocketWire = new THREE.Mesh(rocketGeo, new THREE.MeshBasicMaterial({ color: 0x8b5cf6, wireframe: true, transparent: true, opacity: .2 }));
+    scene.add(rocketMesh, rocketWire);
+
+    const floaters = [];
+    var floaterData = [[new THREE.OctahedronGeometry(.28,0),0x22d3ee],[new THREE.TetrahedronGeometry(.22,0),0x8b5cf6],[new THREE.IcosahedronGeometry(.18,0),0x38bdf8],[new THREE.OctahedronGeometry(.20,0),0xa78bfa],[new THREE.TetrahedronGeometry(.30,0),0x22d3ee],[new THREE.OctahedronGeometry(.15,0),0x8b5cf6],[new THREE.IcosahedronGeometry(.25,0),0x22d3ee],[new THREE.TetrahedronGeometry(.18,0),0x38bdf8]];
+    floaterData.forEach(function (d) {
+        var geo=d[0], col=d[1];
+        var m = new THREE.Mesh(geo, mat(col,.65)); var a=Math.random()*Math.PI*2, rad=6+Math.random()*6;
+        m.position.set(Math.cos(a)*rad,(Math.random()-.5)*10,Math.sin(a)*rad-5); m.userData={spd:.25+Math.random()*.35,offset:Math.random()*Math.PI*2,rad,a}; scene.add(m); floaters.push(m);
+    });
+
+    const ptPos = new Float32Array(2000*3); for(let i=0;i<ptPos.length;i++) ptPos[i]=(Math.random()-.5)*70;
+    const ptGeo = new THREE.BufferGeometry(); ptGeo.setAttribute('position',new THREE.BufferAttribute(ptPos,3));
+    const stars = new THREE.Points(ptGeo,new THREE.PointsMaterial({color:0x22d3ee,size:.055,transparent:true,opacity:.4})); scene.add(stars);
+
+    const grid = new THREE.GridHelper(80,35,0x0a2b34,0x0a2b34); grid.position.y=-12; grid.material.transparent=true; grid.material.opacity=.28; scene.add(grid);
+
+    let mx=0,my=0,cx=0,cy=0,t=0;
+    window.addEventListener('mousemove', function (e) { mx=(e.clientX/innerWidth)*2-1; my=-((e.clientY/innerHeight)*2-1); });
+
+    const themeObserver = new MutationObserver(function () {
+        var light = isLightTheme();
+        renderer.setClearColor(light ? LIGHT_BG : DARK_BG, 1);
+        scene.fog.color.set(light ? LIGHT_BG : DARK_BG);
+    });
+    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-bs-theme'] });
+
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    (function animate(){
+        requestAnimationFrame(animate);
+        if (reduceMotion) { renderer.render(scene, camera); return; }
+        t+=.007;
+        cx+=(mx*.2-cx)*.05; cy+=(my*.15-cy)*.05; camera.position.x=cx*3.5; camera.position.y=2+cy*2; camera.lookAt(0,0,0);
+        rings[0].rotation.x+=.0025; rings[0].rotation.y+=.003;
+        rings[1].rotation.x-=.003; rings[1].rotation.z+=.002;
+        rings[2].rotation.y+=.005; rings[2].rotation.z-=.0025;
+        rings[3].rotation.x+=.004; rings[3].rotation.y-=.003;
+        rocketMesh.rotation.z = Math.sin(t * .8) * .15;
+        rocketMesh.position.y = Math.sin(t * 1.2) * .5;
+        rocketWire.rotation.copy(rocketMesh.rotation);
+        rocketWire.position.copy(rocketMesh.position);
+        pl1.position.x=Math.sin(t*.65)*9; pl1.position.y=Math.cos(t*.45)*6;
+        pl2.position.x=Math.cos(t*.55)*8; pl2.position.y=Math.sin(t*.75)*5;
+        floaters.forEach(function(f){var d=f.userData,na=d.a+t*d.spd*.1; f.position.x=Math.cos(na)*d.rad; f.position.z=Math.sin(na)*d.rad-5; f.position.y=Math.sin(t*d.spd+d.offset)*2; f.rotation.x+=.013; f.rotation.y+=.011;});
+        stars.rotation.y+=.00025; renderer.render(scene,camera);
+    })();
+    } catch (err) {
+        console.error('[NexExam 3D] Student dashboard background failed:', err);
+    }
+})();
+</script>
+
+<!-- Layered-depth card interaction: spring-physics tilt + cursor light -->
+<script th:inline="none">
+(function () {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    document.querySelectorAll('.tilt-card').forEach(function (card) {
+        var targetRX = 0, targetRY = 0, targetLift = 0;
+        var curRX = 0, curRY = 0, curLift = 0;
+        var hovering = false, raf = null;
+
+        function loop() {
+            curRX += (targetRX - curRX) * 0.12;
+            curRY += (targetRY - curRY) * 0.12;
+            curLift += (targetLift - curLift) * 0.12;
+            card.style.transform = 'perspective(700px) rotateX(' + curRX.toFixed(2) + 'deg) rotateY(' + curRY.toFixed(2) + 'deg) translateY(' + curLift.toFixed(2) + 'px)';
+            if (hovering || Math.abs(curRX - targetRX) > 0.05 || Math.abs(curRY - targetRY) > 0.05 || Math.abs(curLift - targetLift) > 0.05) {
+                raf = requestAnimationFrame(loop);
+            } else { raf = null; }
+        }
+        function ensureLoop() { if (!raf) raf = requestAnimationFrame(loop); }
+
+        card.addEventListener('mousemove', function (e) {
+            var r = card.getBoundingClientRect();
+            var px = (e.clientX - r.left) / r.width;
+            var py = (e.clientY - r.top) / r.height;
+            targetRX = -(py - 0.5) * 12;
+            targetRY = (px - 0.5) * 12;
+            targetLift = -6;
+            hovering = true;
+            card.style.setProperty('--mx', (px * 100).toFixed(1) + '%');
+            card.style.setProperty('--my', (py * 100).toFixed(1) + '%');
+            ensureLoop();
+        });
+        card.addEventListener('mouseleave', function () {
+            hovering = false;
+            targetRX = 0; targetRY = 0; targetLift = 0;
+            ensureLoop();
+        });
+    });
+})();
+</script>
+
+<script th:inline="none">
+    document.addEventListener('DOMContentLoaded', () => {
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        // ---- count-up KPI values using the REAL server-rendered numbers ----
+        document.querySelectorAll('.kpi-value').forEach((el) => {
+            const raw = el.textContent.trim();
+            const match = raw.match(/^([\d.]+)(.*)$/);
+            if (!match) return;
+            const target = parseFloat(match[1]);
+            const suffix = match[2] || '';
+            const decimals = (match[1].split('.')[1] || '').length;
+            if (isNaN(target)) return;
+
+            if (reduceMotion) return;
+
+            el.textContent = (0).toFixed(decimals) + suffix;
+            const duration = 1000;
+            const startTime = performance.now();
+            function tick(now) {
+                const progress = Math.min((now - startTime) / duration, 1);
+                const eased = 1 - Math.pow(1 - progress, 3);
+                el.textContent = (target * eased).toFixed(decimals) + suffix;
+                if (progress < 1) requestAnimationFrame(tick);
+            }
+            requestAnimationFrame(tick);
+        });
+    });
+
+    // Time function
+    function updateClock() {
+        const now = new Date();
+        document.getElementById('liveClock').innerText = "System Time: " + now.toLocaleTimeString();
+    }
+    setInterval(updateClock, 1000);
+
+    function goFullscreenAndStart(url) {
+        const elem = document.documentElement;
+        const requestFS = elem.requestFullscreen || elem.webkitRequestFullscreen || elem.msRequestFullscreen;
+        if (requestFS) {
+            requestFS.call(elem).then(() => {
+                setTimeout(() => { window.location.href = url; }, 300);
+            }).catch(() => { window.location.href = url; });
+        } else { window.location.href = url; }
+    }
+</script>
+
+<!-- Performance charts — reads real data from hidden DOM points, no inline JS literals -->
+<script th:inline="none">
+document.addEventListener('DOMContentLoaded', function () {
+    // Animate the history timeline bars in
+    document.querySelectorAll('.history-bar-fill').forEach(function (bar) {
+        var target = bar.getAttribute('data-target') || 0;
+        setTimeout(function () { bar.style.width = target + '%'; }, 300);
+    });
+
+    var points = Array.prototype.map.call(document.querySelectorAll('#resultsData .result-point'), function (el) {
+        return {
+            title: el.getAttribute('data-title'),
+            pct: parseFloat(el.getAttribute('data-pct')) || 0,
+            date: el.getAttribute('data-date')
+        };
+    });
+
+    var isLight = document.documentElement.getAttribute('data-bs-theme') === 'light';
+    var gridColor = isLight ? 'rgba(15,23,42,.06)' : 'rgba(255,255,255,.06)';
+    var textColor = isLight ? '#5b6489' : '#9099b8';
+
+    if (points.length === 0) {
+        ['trendChart', 'accuracyChart'].forEach(function (id) {
+            var c = document.getElementById(id);
+            if (c) { c.parentElement.innerHTML = '<div class="d-flex align-items-center justify-content-center h-100 text-center" style="color: var(--text-sec); font-size: .85rem;"><span><i class="bi bi-bar-chart d-block mb-2" style="font-size:1.6rem; opacity:.4;"></i>No exam history yet</span></div>'; }
+        });
+        document.getElementById('passCountVal').textContent = '0';
+        document.getElementById('failCountVal').textContent = '0';
+        document.getElementById('avgAccuracyVal').textContent = '0%';
+        return;
+    }
+
+    // ---- Score Trend line chart ----
+    var trendCtx = document.getElementById('trendChart').getContext('2d');
+    var lineGrad = trendCtx.createLinearGradient(0, 0, 0, 220);
+    lineGrad.addColorStop(0, 'rgba(34,211,238,.35)');
+    lineGrad.addColorStop(1, 'rgba(34,211,238,0)');
+
+    new Chart(trendCtx, {
+        type: 'line',
+        data: {
+            labels: points.map(function (p) { return p.date; }),
+            datasets: [{
+                label: 'Score %',
+                data: points.map(function (p) { return p.pct; }),
+                borderColor: '#22d3ee',
+                backgroundColor: lineGrad,
+                borderWidth: 2.5,
+                pointBackgroundColor: '#8b5cf6',
+                pointBorderColor: '#fff',
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                fill: true,
+                tension: 0.35
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { min: 0, max: 100, grid: { color: gridColor }, ticks: { color: textColor, callback: function (v) { return v + '%'; } } },
+                x: { grid: { display: false }, ticks: { color: textColor } }
+            }
+        }
+    });
+
+    // ---- Accuracy doughnut ----
+    var passCount = points.filter(function (p) { return p.pct >= 30; }).length;
+    var failCount = points.length - passCount;
+    var avgAccuracy = points.reduce(function (sum, p) { return sum + p.pct; }, 0) / points.length;
+
+    document.getElementById('passCountVal').textContent = passCount;
+    document.getElementById('failCountVal').textContent = failCount;
+    document.getElementById('avgAccuracyVal').textContent = avgAccuracy.toFixed(1) + '%';
+
+    new Chart(document.getElementById('accuracyChart').getContext('2d'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Qualified', 'Below 30%'],
+            datasets: [{
+                data: [passCount, failCount],
+                backgroundColor: ['#34d399', '#f87171'],
+                borderColor: 'transparent',
+                hoverOffset: 10
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '70%',
+            plugins: { legend: { position: 'bottom', labels: { color: textColor, font: { size: 11 }, padding: 12 } } }
+        }
+    });
+});
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
