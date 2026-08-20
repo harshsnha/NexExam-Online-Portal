@@ -7,6 +7,7 @@ import com.example.exam.repository.ExamRepository;
 import com.example.exam.repository.ExamResultRepository;
 import com.example.exam.repository.UserRepository;
 import com.example.exam.service.FileStorageService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -16,9 +17,8 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -115,7 +115,7 @@ public class StudentController {
     }
 
     @GetMapping("/certificate/{resultId}")
-    public String viewCertificate(@PathVariable Long resultId, Model model) {
+    public String viewCertificate(@PathVariable Long resultId, Model model, HttpServletRequest request) {
         User student = getAuthenticatedUser();
         ExamResult result = examResultRepository.findById(resultId)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid result Id"));
@@ -131,19 +131,23 @@ public class StudentController {
         }
 
         String specialNumber = "NEX-" + result.getSubmissionTime().getYear() + "-" + (1000 + result.getId());
-        String ipAddress = "localhost";
-        try {
-            ipAddress = InetAddress.getLocalHost().getHostAddress();
-        } catch (UnknownHostException e) {
-            e.printStackTrace();
-        }
 
-        String verifyUrl = "http://" + ipAddress + ":8081/verify/result/" + resultId;
+        // Build the real public base URL (scheme + host + port) from the incoming
+        // request itself, instead of guessing a local network IP. This automatically
+        // gives the correct https://your-app.up.railway.app in production and
+        // http://localhost:8081 when running locally — no hardcoding needed.
+        String baseUrl = ServletUriComponentsBuilder.fromRequestUri(request)
+                .replacePath(null)
+                .replaceQuery(null)
+                .build()
+                .toUriString();
+
+        String verifyUrl = baseUrl + "/verify/result/" + resultId;
         String qrCodeUrl = "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=" + verifyUrl;
 
         model.addAttribute("result", result);
         model.addAttribute("student", student);
-        model.addAttribute("percentage", (int)percentage);
+        model.addAttribute("percentage", (int) percentage);
         model.addAttribute("specialNumber", specialNumber);
         model.addAttribute("qrCodeUrl", qrCodeUrl);
 
