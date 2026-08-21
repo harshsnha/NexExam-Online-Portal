@@ -196,8 +196,29 @@ public class AdminController {
     }
 
     @GetMapping("/exam/delete/{examId}")
-    public String deleteExam(@PathVariable Long examId) {
-        examRepository.deleteById(examId);
+    @Transactional
+    public String deleteExam(@PathVariable Long examId, RedirectAttributes redirectAttributes) {
+        try {
+            Exam exam = examRepository.findById(examId)
+                    .orElseThrow(() -> new IllegalArgumentException("Invalid exam Id:" + examId));
+
+            // IMPORTANT ORDER: delete ExamResults first (this cascades to their
+            // ExamAnswers automatically via ExamResult's own cascade/orphanRemoval).
+            // Only AFTER that is it safe to delete Questions — an ExamAnswer row
+            // references both a Question and an ExamResult, so deleting Questions
+            // first would violate that foreign key and crash with a 500.
+            List<ExamResult> results = examResultRepository.findByExam(exam);
+            examResultRepository.deleteAll(results);
+            examResultRepository.flush();
+
+            questionRepository.deleteAll(exam.getQuestions());
+            questionRepository.flush();
+
+            examRepository.delete(exam);
+            redirectAttributes.addFlashAttribute("successMessage", "Exam deleted successfully.");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Error deleting exam: " + e.getMessage());
+        }
         return "redirect:/admin/manage-exams";
     }
 
